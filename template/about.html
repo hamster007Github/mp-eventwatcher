@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block header %}
+<style>
+    code {
+    background: #f4f4f4;
+    border: 1px solid #ddd;
+    border-left: 3px solid #f36d33;
+    color: #666;
+    page-break-inside: avoid;
+    font-family: 'Courier New';
+    line-height: 1.6;
+    max-width: 100%;
+    overflow: auto;
+    padding: 1em 1.5em;
+    display: block;
+    word-wrap: break-word;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+{% if not pub %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+{% if not pub %}
+<br/>
+<h3>EventWatcher Plugin - About</h3>
+<br/>
+For information and updates: <a href="https://github.com/hamster007Github/mp-eventwatcher">https://github.com/hamster007Github/mp-eventwatcher</a><br/>
+<br/>
+Credits:
+<ul>
+  <li><a href="https://github.com/ccev">Malte (CCEV)</a> for <a href="https://github.com/ccev/mp-eventwatcher">base project</a> and providing <a href="https://github.com/ccev/pogoinfo">pogoinfo</a></li> 
+  <li>Code snippets for sorting plugin page table: <a href="https://www.w3schools.com/howto/howto_js_sort_table.asp">https://www.w3schools.com/howto/howto_js_sort_table.asp</a></li>
+</ul>
+{% endif %}
+
+{% endblock %}
