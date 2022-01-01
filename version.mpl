@@ -1,6 +1,6 @@
 [plugin]
 pluginname = EventWatcher
-description = Automatically put Events that boost Spawns in your database
+description = Monitors events and automatically add/update spawn boosting events to MAD database. Additionally can reset pokemon and/or quests in MAD DB on event change.
 author = ccev
-url = https://github.com/ccev/mp-eventwatcher
-version = 2.3.3
+url = https://github.com/hamster007Github/mp-eventwatcher
+version = 1.0.0

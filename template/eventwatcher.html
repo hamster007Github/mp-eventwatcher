@@ -1,9 +1,6 @@
 {% extends "base.html" %}
 
 {% block header %}
-{% endblock %}
-
-{% block scripts %}
 <style>
     code {
     background: #f4f4f4;
@@ -22,12 +19,99 @@
 </style>
 {% endblock %}
 
+{% block scripts %}
+{% if not pub %}
+<script>
+function sortTable(n) {
+  var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+  table = document.getElementById("ew_eventtable");
+  switching = true;
+  // Set the sorting direction to ascending:
+  dir = "asc";
+  /* Make a loop that will continue until
+  no switching has been done: */
+  while (switching) {
+    // Start by saying: no switching is done:
+    switching = false;
+    rows = table.rows;
+    /* Loop through all table rows (except the
+    first, which contains table headers): */
+    for (i = 1; i < (rows.length - 1); i++) {
+      // Start by saying there should be no switching:
+      shouldSwitch = false;
+      /* Get the two elements you want to compare,
+      one from current row and one from the next: */
+      x = rows[i].getElementsByTagName("TD")[n];
+      y = rows[i + 1].getElementsByTagName("TD")[n];
+      /* Check if the two rows should switch place,
+      based on the direction, asc or desc: */
+      if (dir == "asc") {
+        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+          // If so, mark as a switch and break the loop:
+          shouldSwitch = true;
+          break;
+        }
+      } else if (dir == "desc") {
+        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+          // If so, mark as a switch and break the loop:
+          shouldSwitch = true;
+          break;
+        }
+      }
+    }
+    if (shouldSwitch) {
+      /* If a switch has been marked, make the switch
+      and mark that a switch has been done: */
+      rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+      switching = true;
+      // Each time a switch is done, increase this count by 1:
+      switchcount ++;
+    } else {
+      /* If no switching has been done AND the direction is "asc",
+      set the direction to "desc" and run the while loop again. */
+      if (switchcount == 0 && dir == "asc") {
+        dir = "desc";
+        switching = true;
+      }
+    }
+  }
+}
+</script>
+{% endif %}
+{% endblock %}
+
 {% block content %}
-Apparently you need such page for the Plugin to show up in MAD. So you can ignore this for now.
-<br>
-<br>
-don't forget to star this on github: https://github.com/ccev/mp-eventwatcher :)))
-<br>
-also join the discord so i can notify you if there's an update for this
+
+{% if not pub %}
+<br />
+<h3>EventWatcher Plugin - Event list</h3>
+<br />
+
+<table id=ew_eventtable border="1">
+  <tr>
+    <th style="text-align:left" onclick="sortTable(0)">Name</th>
+    <th style="text-align:left" onclick="sortTable(1)">Type</th>
+    <th style="text-align:left" onclick="sortTable(2)">start*</th>
+    <th style="text-align:left" onclick="sortTable(3)">end*</th>
+    <th style="text-align:left" onclick="sortTable(4)">has spawnpoints</th>
+    <th style="text-align:left" onclick="sortTable(5)">has quests</th>
+    <th style="text-align:left" onclick="sortTable(6)">has pokemon</th>
+    <th style="text-align:left" onclick="sortTable(7)">bonus lure duration</th>
+  </tr>
+  {% for eventelement in event_list %}
+  <tr>
+    <td>{{eventelement.name}}</td>
+    <td>{{eventelement.etype}}</td>
+    <td>{{eventelement.start}}</td>
+    <td>{{eventelement.end}}</td>
+    <td>{{eventelement.has_spawnpoints}}</td>
+    <td>{{eventelement.has_quests}}</td>
+    <td>{{eventelement.has_pokemon}}</td>
+    <td>{{eventelement.bonus_lure_duration}}</td>
+  </tr>
+  {% endfor %}
+</table>
+*=local times
+{% endif %}
 
 {% endblock %}
