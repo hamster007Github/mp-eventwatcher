@@ -25,6 +25,7 @@ class EventWatcherEvent():
         self.has_pokemon = has_pokemon
         self.bonus_lure_duration = bonus_lure_duration
 
+    #TBD: remove testcode
     def __repr__(self):
         return f"name:{self.name} type:{self.etype} start:{self.start} end:{self.end} has_spawnpoints:{self.has_spawnpoints} has_quests:{self.has_quests} has_pokemon:{self.has_pokemon} bonus_lure_duration:{self.bonus_lure_duration}"
 
@@ -294,9 +295,9 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
 
         # go through all events that boost spawns, check if their times differ from the event in the db
         # and if so, update the db accordingly
-        finished_events = []
+        updated_mad_events = []
         for event in self._spawn_events:
-            if event.etype not in finished_events:
+            if event.etype not in updated_mad_events:
                 type_name = self.type_to_name.get(event.etype, "Others")
                 db_entry = events_in_db[type_name]
                 if db_entry["event_start"] != event.start or db_entry["event_end"] != event.end:
@@ -309,9 +310,9 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                         "event_name": self.type_to_name.get(event.etype, "Others")
                     }
                     self._mad['db_wrapper'].autoexec_update("trs_event", vals, where_keyvals=where)
-                    self._mad['logger'].success(f"EventWatcher: Updated MAD event {event.etype}")
+                    self._mad['logger'].success(f"EventWatcher: Updated MAD event {event.etype} with start:{event.start}, end:{event.end}, lure_duration:{event.event_lure_duration}")
 
-                finished_events.append(event.etype)
+                updated_mad_events.append(event.etype)
 
         # just deletes all events that aren't part of Event Watcher
         if self.__delete_events:
@@ -349,7 +350,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             self._all_events.append(new_event)
             
             # get events with changed spawnpoints
-            # TBD: check how to handle events with just bonus_lure_duration. separate event type + only change lure duration for default event?
+            # TBD: check how to handle events with just bonus_lure_duration. Hint: MAD ignores lure_duration setting for event 'DEFAULT' (see function _extract_args_single_stop)
             if new_event.has_spawnpoints:
                 self._spawn_events.append(new_event)
             # get events with changed quests
