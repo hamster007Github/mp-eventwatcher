@@ -4,7 +4,7 @@ This is a fork from [mp-eventwatcher](https://github.com/ccev/mp-eventwatcher) f
 - use of plugin pages to visualize current event data of plugin
 - Only delete quest table in case of quest reset instead of manipulate walker. Enable MAD to rescan quests. Example walker setting:
 | Area          | Area mode | Walker mode | Setting    |
-|---------------|-----------|-------------|------------|
+| ------------- | --------- | ----------- | ---------- |
 | quest_all     | pokestops | coords      | 1:00-6:00  |
 | quest_rescan<sup>1</sup> | pokestops | coords      | 6:00-18:00 |
 | pokemon       | mon_mitm  | period      | 1:10-1:00  |
