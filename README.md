@@ -2,18 +2,17 @@
 This is a fork from [mp-eventwatcher](https://github.com/ccev/mp-eventwatcher) for personal changes and because coding is fun :). Changes:
 - using own defined class for events (because I like it ;) )
 - use of plugin pages to visualize current event data of plugin
-- Only delete quest table in chase of quest reset instead of manipulate walker. Easier for small setups (use of rescan area in walker setting). Example walker setting:
-  1. Area: quest_all / coords / 1:00-6:00
-  2. Area: quest_rescan / coords / 6:00-18:00  (if quest are deleted during this time window -> MAD will use this Area to rescan with e.g. smaller geofence or limited devices)
-  3. Area: pokemon / period / 1:10-1:00
+- Only delete quest table in case of quest reset instead of manipulate walker. Enable MAD to rescan quests. Example walker setting:
+| Area          | Area mode | Walker mode | Setting    |
+|---------------|-----------|-------------|------------|
+| quest_all     | pokestops | coords      | 1:00-6:00  |
+| quest_rescan<sup>1</sup> | pokestops | coords      | 6:00-18:00 |
+| pokemon       | mon_mitm  | period      | 1:10-1:00  |
 
+<sup>1</sup>Area especially for quest rescan with limited devices/pokestops -> MAD will use this Area to rescan with e.g. smaller geofence or limited devices)
 
 ### Improvements
-
-Possible improvements that I've thought of
-- Better documentation. I think a lot of people don't understand what Event Watcher does or how it should be configured
-- Possibly an optional Raid Boss prediction. Instead of writing an egg to the DB, it could write the current boss to it. I tried implementing this but it got super hacky. maybe there's a better solution than what I had.
-- Update lure duration for default event in case of not spawn changing event with lure duration != default lure duration
+- Update lure duration for default event in case of not spawn changing event with lure duration != default lure duration ->  MAD ignores lure_duration setting for event 'DEFAULT' (see function _extract_args_single_stop() in [DbPogoProtoSubmit.py](https://github.com/Map-A-Droid/MAD/blob/master/mapadroid/db/DbPogoProtoSubmit.py))
 
 ## Usage:
 You can import this like any other MAD Plugin.
@@ -41,6 +40,6 @@ There are following config options:
 please also join [this discord](https://discord.gg/cMZs5tk)
 
 ## How does it work?
-To not put unnecessary load on cool community-made websites, the Plugin pulls data from [this file](https://github.com/ccev/pogoinfo/blob/v2/active/events.json). A list I automatically update and commit to github.
+To not put unnecessary load on cool community-made websites, the Plugin pulls data from [this file](https://github.com/ccev/pogoinfo/blob/v2/active/events.json).
 
 The Plugin then grabs that file and checks if an event is missing for you or changed information and then updates your database accordingly.
