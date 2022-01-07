@@ -2,6 +2,7 @@
 This is a fork from [mp-eventwatcher](https://github.com/ccev/mp-eventwatcher) for personal changes and because coding is fun :). Changes:
 - using own defined class for events (because I like it ;) )
 - use of plugin pages to visualize current event data of plugin
+- only add events with additional spawnpoints to MAD event database. Original version also add events with just bonus lure duration, which can lead to unwanted spanwpoint mix-up
 - Only delete quest table in case of quest reset instead of manipulate walker. Enable MAD to rescan quests. Example walker setting:
 
 | Area          | Area mode | Walker mode | Setting    |
