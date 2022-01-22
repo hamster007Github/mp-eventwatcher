@@ -1,24 +1,37 @@
 [plugin]
 ; general plugin activation option ['true' or 'false']
 active = true
-
 ; define the time to wait in-between checking for new events in seconds. default = 3600 (= 1 hour)
 sleep = 3600
-
 ; option to delete events from MAD database, which are not part of EventWatcher plugin ['true' or 'false']
 delete_events = false
-
 ; ignore events with duration longer than max_event_duration days. set to high value to disable (e.g. 999)
 max_event_duration = 30
 
-; option to automatically delete obsolete pokemon from MAD database on start and end of spawn event to enable MAD to rescan pokemon. ['true' or 'false']
+; *******************************
+; * Pokemon reset configuration *
+; *******************************
+; option to automatically delete obsolete pokemon from MAD database on start and end of spawn event to enable MAD to rescan pokemon. ['true' or 'false' (default)]
 reset_pokemon_enable = false
-
-; option to use TRUNCATE SQL query instead of DELETE. Recommended for bigger instances ['true' or 'false']
+; option to use TRUNCATE SQL query instead of DELETE. Recommended for bigger instances ['true' or 'false' (default)]
 reset_pokemon_truncate = false
+; restart pokemon go app on all devices on pokemon reset to flush encounter IDs in PD ['true' or 'false' (default)]
+reset_pokemon_restart_app = false
 
-; option to automatically delete quests from MAD database on start and/or end of quest changing event to enable MAD to rescan quests. ['true' or 'false']
-reset_quests_enable = true
-
+; *******************************
+; * Quest reset configuration   *
+; *******************************
+; option to automatically delete quests from MAD database on start and/or end of quest changing event to enable MAD to rescan quests. ['true' or 'false' (default)]
+reset_quests_enable = false
 ; define event types and if you want quests to reset for their start, end or both. [Available event types are 'event', 'community-day', 'spotlight-hour' and 'raid-hour']
 reset_quests_event_type = event
+
+; *******************************
+; * Telegram info configuration *
+; *******************************
+; Telegram bot API token from @godfather. ['true' or 'false' (default)]
+tg_info_enable = false
+; Telegram bot API token from @godfather. Example: tg_bot_token = 1234567890:ABCDEFGHiJkLmnopq123AbcdefGh
+#tg_bot_token = 
+; @username or id. Example: tg_chat_id = 12345678
+#tg_chat_id = 

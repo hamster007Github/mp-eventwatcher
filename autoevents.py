@@ -3,7 +3,7 @@ import requests
 import json
 import time
 import re
-
+import urllib
 from threading import Thread
 from flask import render_template, Blueprint, jsonify
 from datetime import datetime, timedelta
@@ -13,6 +13,50 @@ import mapadroid.utils.pluginBase
 
 DEFAULT_LURE_DURATION = 30
 DEFAULT_TIME = datetime(2030, 1, 1, 0, 0, 0)
+
+
+class SimpleTelegramApi:
+    def __init__(self, api_token):
+        self._base_url = self._get_base_url(api_token)
+
+    def _get_base_url(self, api_token):
+        return "https://api.telegram.org/bot{}/".format(api_token)
+
+    def _send_request(self, command):
+        request_url = self._base_url + command
+        #print(f"Send_Request:{command}")
+        response = requests.get(request_url)
+        decoded_response = response.content.decode("utf8")
+        return decoded_response
+
+    def send_message(self, chat_id, text, parse_mode="HTML"):
+        text = urllib.parse.quote_plus(text)
+        response = self._send_request("sendMessage?text={}&chat_id={}&parse_mode={}".format(text, chat_id, parse_mode))
+        response = json.loads(response)
+        return response
+
+    def edit_message(self, chat_id, message_id, text, parse_mode="HTML"):
+        text = urllib.parse.quote_plus(text)
+        response = self._send_request("editMessageText?chat_id={}&message_id={}&parse_mode={}&text={}".format(chat_id, message_id, parse_mode, text))
+        response = json.loads(response)
+        # if edit a message with same text, you will get 'error_code': 400, 'description': 'Bad Request: message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message'
+        return response
+
+    def delete_message(self, chat_id, message_id):
+        response = self._send_request("deleteMessage?chat_id={}&message_id={}".format(chat_id, message_id))
+        response = json.loads(response)
+        return response
+
+    def pin_message(self, chat_id, message_id, disable_notification="True"):
+        response = self._send_request("pinChatMessage?chat_id={}&message_id={}&disable_notification={}".format(chat_id, message_id, disable_notification))
+        response = json.loads(response)
+        return response
+
+    def get_message(self):
+        response = self._send_request("getUpdates")
+        response = json.loads(response)
+        return response
+
 
 class EventWatcherEvent():
     def __init__(self, event_name, event_type, start_datetime, end_datetime, has_spawnpoints, has_quests, has_pokemon, bonus_lure_duration = None):
@@ -146,10 +190,18 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             self.__sleep_mainloop_in_s = 60
             self.__delete_events = self._pluginconfig.getboolean("plugin", "delete_events", fallback=False)
             self.__ignore_events_duration_in_days = self._pluginconfig.getint("plugin", "max_event_duration", fallback=999)
-
+            # Telegram info configuration
+            self.__tg_info_enable = self._pluginconfig.getboolean("plugin", "tg_info_enable", fallback=False)
+            if self.__tg_info_enable:
+                self.__token = self._pluginconfig.get("plugin", "tg_bot_token", fallback=None)
+                self.__tg_chat_id = self._pluginconfig.get("plugin", "tg_chat_id", fallback=None)
+                if self.__token is None or self.__tg_chat_id is None:
+                    self._mad['logger'].error(f"EventWatcher: TG options not set fully set in plugin.ini: 'tg_bot_token':{self.__token} 'tg_chat_id':{self.__tg_chat_id}")
+                    return False
             # pokemon reset configuration
             self.__reset_pokemon_enable = self._pluginconfig.getboolean("plugin", "reset_pokemon_enable", fallback=False)
             self.__reset_pokemon_truncate = self._pluginconfig.getboolean("plugin", "reset_pokemon_truncate", fallback=False)
+            self.__reset_pokemon_restart_app = self._pluginconfig.getboolean("plugin", "reset_pokemon_restart_app", fallback=False)
             
             # quest reset configuration
             self.__quests_enable = self._pluginconfig.getboolean("plugin", "reset_quests_enable", fallback=False)
@@ -187,24 +239,53 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             time = time + timedelta(hours=self.tz_offset)
         return time
 
+    def _send_tg_info_questreset(self, event_name, event_change_str):
+        if self.__tg_info_enable:
+            #@TODO: make rescan string and condition configurable
+            now = datetime.now()
+            latest_rescan_time = now.replace(hour=18, minute=0)
+            if now < latest_rescan_time:
+                rescan_str = "Automatischer kleiner Questscan gestartet."
+            else:
+                rescan_str = "Kein neuer Questscan gestartet."
+            #@TODO: make quest reset string configurable
+            info_msg = f"\U000026A0 Info: Quests gelöscht aufgrund {event_change_str} von Event {event_name}. {rescan_str}"
+            self._api.send_message(self.__tg_chat_id, info_msg)
+
     def _reset_all_quests(self):
         sql_query = "TRUNCATE trs_quest"
         dbreturn = self._mad['db_wrapper'].execute(sql_query, commit=True)
-        self._mad['logger'].info(f'EventWatcher: quests deleted by SQL query: {sql_query} return: {dbreturn}')    
-    
+        self._mad['logger'].info(f'EventWatcher: quests deleted by SQL query: {sql_query} return: {dbreturn}')
+
+    def _restart_pogo_app(self, origin_name):
+        self._mad['logger'].info(f"EventWatcher: restart PoGo app on device '{origin_name}' ...")
+        temp_comm = self._mad['ws_server'].get_origin_communicator(origin_name)
+        result = temp_comm.restart_app("com.nianticlabs.pokemongo")
+        if result is True:
+            self._mad['logger'].success(f"EventWatcher: restart PoGo app on device '{origin_name}' successful")
+        else:
+            self._mad['logger'].error(f"EventWatcher: restart PoGo app on device '{origin_name}' failed with result:{result}")
+
     def _reset_pokemon(self, eventchange_datetime_UTC):
         if self.__reset_pokemon_truncate:
             sql_query = "TRUNCATE pokemon"
             sql_args = None
         else:
+            # SQL query: delete mon
+            eventchange_timestamp = eventchange_datetime_UTC.strftime("%Y-%m-%d %H:%M:%S")
             sql_query = "DELETE FROM pokemon WHERE last_modified < %s AND disappear_time > %s"
-            datestring = eventchange_datetime_UTC.strftime("%Y-%m-%d %H:%M:%S")
             sql_args = (
-                datestring,
-                datestring
+                eventchange_timestamp,
+                eventchange_timestamp
             )
         dbreturn = self._mad['db_wrapper'].execute(sql_query, args=sql_args, commit=True)
         self._mad['logger'].info(f'EventWatcher: pokemon deleted by SQL query: {sql_query} arguments: {sql_args} return: {dbreturn}')
+
+        #restart pokemon go apps on all devices
+        if self.__reset_pokemon_restart_app:
+            origin_list = self._mad['ws_server'].get_reg_origins()
+            for origin in origin_list:
+                self._restart_pogo_app(origin)
 
     def _check_pokemon_resets(self):
         #get current time to check for event start and event end
@@ -239,6 +320,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                     # remove all quests from MAD DB
                     self._reset_all_quests()
                     self._mad["mapping_manager"].update()
+                    self._send_tg_info_questreset(event.name, "Start")
                     break
             # event end during last check?
             if "end" in self.__quests_reset_types.get(event.etype, []):
@@ -247,6 +329,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                     # remove all quests from MAD DB
                     self._reset_all_quests()
                     self._mad["mapping_manager"].update()
+                    self._send_tg_info_questreset(event.name, "Ende")
                     break
         self._last_quest_reset_check = now
 
@@ -295,7 +378,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                         "event_name": self.type_to_name.get(event.etype, "Others")
                     }
                     self._mad['db_wrapper'].autoexec_update("trs_event", vals, where_keyvals=where)
-                    self._mad['logger'].success(f"EventWatcher: Updated MAD event {event.etype}({db_event_name}) with start:{event.start}, end:{event.end}, lure_duration:{event.event_lure_duration}")
+                    self._mad['logger'].success(f'EventWatcher: Updated MAD event {vals["event_name"]} with start:{vals["event_start"]}, end:{vals["event_end"]}, lure_duration:{vals["event_lure_duration"]}')
 
                 updated_mad_events.append(event.etype)
 
@@ -344,17 +427,6 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             if new_event.has_pokemon:
                 self._pokemon_events.append(new_event)
 
-        '''
-        #testcode
-        new_event1 = EventWatcherEvent("testeventPokemonQuest","event",datetime(2022, 1, 7, 11, 23, 0), datetime(2022, 1, 7, 11, 27, 0), has_spawnpoints=False, has_quests=True, has_pokemon=True)
-        new_event2 = EventWatcherEvent("testeventPokemon","event",datetime(2022, 1, 7, 11, 23, 0), datetime(2022, 1, 7, 11, 25, 0), has_spawnpoints=False, has_quests=False, has_pokemon=True)
-        new_event3 = EventWatcherEvent("testeventQuest","event",datetime(2022, 1, 7, 14, 6, 0), datetime(2022, 1, 7, 17, 8, 0), has_spawnpoints=False, has_quests=True, has_pokemon=False)
-        self._pokemon_events.append(new_event1)
-        self._pokemon_events.append(new_event2)
-        self._quest_events.append(new_event1)
-        self._quest_events.append(new_event3)
-        '''
-
         #sort pokemon lists
         self._quest_events = sorted(self._quest_events, key=lambda e: e.start)
         self._spawn_events = sorted(self._spawn_events, key=lambda e: e.start)
@@ -363,7 +435,8 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
 
     def EventWatcher(self):
         last_checked_events = datetime(2000, 1, 1, 0, 0, 0)
-        #newEvent = EventWatcherEvent("Testname", 'community-day', datetime.now(), datetime.now())
+        if(self.__tg_info_enable):
+            self._api = SimpleTelegramApi(self.__token)
         
         while True:
             # check for new events on event website only with configurated event check time
