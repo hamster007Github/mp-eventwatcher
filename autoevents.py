@@ -75,18 +75,23 @@ class EventWatcherEvent():
 
     @classmethod
     def fromPogoinfo(cls, raw_event):
-        #check for valid input:
-        if raw_event["type"] is None or raw_event["start"] is None or raw_event["end"] is None:
-            return None   
+        #check for valid input, unknown eventstart (=None) is accepted
+        if raw_event["type"] is None or raw_event["end"] is None:
+            return None
 
+        # if event is added after eventstart to pogoinfo, start is Null
         bonus_lure_duration = None
         has_pokemon = False  
         event_type = raw_event["type"]
-        
+
         # convert times to datetimes (pogoinfo provide local times)
-        start = datetime.strptime(raw_event["start"], "%Y-%m-%d %H:%M")
+        # handle unknown eventstart
+        if raw_event["start"] is not None:
+            start = datetime.strptime(raw_event["start"], "%Y-%m-%d %H:%M")
+        else:
+            start = None
         end = datetime.strptime(raw_event["end"], "%Y-%m-%d %H:%M")
-        if start is None or end is None:
+        if end is None:
             return None
 
         # get bonus lure duration time
@@ -95,17 +100,24 @@ class EventWatcherEvent():
             if bonus.get("template", "") == "longer-lure":
                 bonus_lure_duration = bonus["value"]*60
                 break
-                
+
         # check for changed pokemon spawn pool
         if raw_event["type"] == 'spotlight-hour' or raw_event["type"] == 'community-day' or raw_event["spawns"]:
             has_pokemon = True
-                
+
         return cls(raw_event["name"], event_type, start, end, raw_event["has_spawnpoints"], raw_event["has_quests"], has_pokemon, bonus_lure_duration)     
 
     def get_duration_in_days(self):
-        return (self.end - self.start).total_seconds() / (3600 * 24)
+        start = self.start
+        #handle unknown start
+        if self.start is None:
+            start = datetime.now()
+        return (self.end - start).total_seconds() / (3600 * 24)
 
     def check_event_start(self, timewindow_start, timewindow_end):
+        #handle unknown start
+        if self.start is None:
+            return False
         if timewindow_start < self.start <= timewindow_end:
             return True
         else:
@@ -121,11 +133,11 @@ class EventWatcherEvent():
 class EventWatcher(mapadroid.utils.pluginBase.Plugin):
     def __init__(self, mad):
         super().__init__(mad)
-        
+
         self._rootdir = os.path.dirname(os.path.abspath(__file__))
-        
+
         self._mad = mad
-        
+
         self._pluginconfig.read(self._rootdir + "/plugin.ini")
         self._versionconfig.read(self._rootdir + "/version.mpl")
         self.author = self._versionconfig.get("plugin", "author", fallback="ccev")
@@ -134,10 +146,10 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             "plugin", "description", fallback="Automatically put Events that boost Spawns in your database")
         self.version = self._versionconfig.get("plugin", "version", fallback="1.0")
         self.pluginname = self._versionconfig.get("plugin", "pluginname", fallback="EventWatcher")
-        
+
         self.templatepath = self._rootdir + "/template/"
         self.staticpath = self._rootdir + "/static/"
-        
+
         self._routes = [
             ("/ew_event_list", self.pluginpage_event_list),
             ("/ew_about", self.pluginpage_about)
@@ -146,7 +158,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             ("Event list", "/ew_event_list", "List current events known by plugin"),
             ("About", "/ew_about", "Plugin information and credits"),
         ]
-        
+
         self.type_to_name = {
             "community-day": "Community Days",
             "spotlight-hour": "Spotlight Hours",
@@ -160,10 +172,10 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         if self._pluginconfig.getboolean("plugin", "active", fallback=False):
             self._plugin = Blueprint(
                 str(self.pluginname), __name__, static_folder=self.staticpath, template_folder=self.templatepath)
-            
+
             for route, view_func in self._routes:
                 self._plugin.add_url_rule(route, route.replace("/", ""), view_func=view_func)
-            
+
             for name, link, description in self._hotlink:
                 self._mad['madmin'].add_plugin_hotlink(name, self._plugin.name+"."+link.replace("/", ""),
                                                        self.pluginname, self.description, self.author, self.url,
@@ -204,7 +216,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             self.__reset_pokemon_restart_app = self._pluginconfig.getboolean("plugin", "reset_pokemon_restart_app", fallback=False)
             
             # quest reset configuration
-            self.__quests_enable = self._pluginconfig.getboolean("plugin", "reset_quests_enable", fallback=False)
+            self.__reset_quests_enable = self._pluginconfig.getboolean("plugin", "reset_quests_enable", fallback=False)
             reset_for = self._pluginconfig.get("plugin", "reset_quests_event_type", fallback="event")
             self.__quests_reset_types = {}
             for etype in reset_for.split(" "):
@@ -250,7 +262,11 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 rescan_str = "Kein neuer Questscan gestartet."
             #@TODO: make quest reset string configurable
             info_msg = f"\U000026A0 Info: Quests gelöscht aufgrund {event_change_str} von Event {event_name}. {rescan_str}"
-            self._api.send_message(self.__tg_chat_id, info_msg)
+            result = self._api.send_message(self.__tg_chat_id, info_msg)
+            if result["ok"]:
+                self._mad['logger'].success(f"EventWatcher: send Telegram info message:{info_msg} result:{result}")
+            else:
+                self._mad['logger'].error(f"EventWatcher: send Telegram info message failed with result:{result}")
 
     def _reset_all_quests(self):
         sql_query = "TRUNCATE trs_quest"
@@ -288,189 +304,205 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 self._restart_pogo_app(origin)
 
     def _check_pokemon_resets(self):
-        #get current time to check for event start and event end
-        now = datetime.now()
         self._mad['logger'].info("EventWatcher: check pokemon changing events")
-        # check, if one of the pokemon event is just started or ended
-        for event in self._pokemon_events:
-            # event start during last check?
-            if event.check_event_start(self._last_pokemon_reset_check, now):
-                self._mad['logger'].success(f'EventWatcher: event start detected for event {event.name} ({event.etype}) -> reset pokemon')
-                # remove pokemon from MAD DB, which are scanned before event start and needs to be rescanned, adapt time from local to UTC time
-                self._reset_pokemon(event.start - timedelta(hours=self.tz_offset))
-                break
-            # event end during last check?
-            if event.check_event_end(self._last_pokemon_reset_check, now):
-                self._mad['logger'].success(f'EventWatcher: event end detected for event {event.name} ({event.etype}) -> reset pokemon')
-                # remove pokemon from MAD DB, which are scanned before event end and needs to be rescanned, adapt time from local to UTC time
-                self._reset_pokemon(event.end - timedelta(hours=self.tz_offset))
-                break
-        self._last_pokemon_reset_check = now
+        try:
+            #get current time to check for event start and event end
+            now = datetime.now()
+
+            # check, if one of the pokemon event is just started or ended
+            for event in self._pokemon_events:
+                # event start during last check?
+                if event.check_event_start(self._last_pokemon_reset_check, now):
+                    self._mad['logger'].success(f'EventWatcher: event start detected for event {event.name} ({event.etype}) -> reset pokemon')
+                    # remove pokemon from MAD DB, which are scanned before event start and needs to be rescanned, adapt time from local to UTC time
+                    self._reset_pokemon(event.start - timedelta(hours=self.tz_offset))
+                    break
+                # event end during last check?
+                if event.check_event_end(self._last_pokemon_reset_check, now):
+                    self._mad['logger'].success(f'EventWatcher: event end detected for event {event.name} ({event.etype}) -> reset pokemon')
+                    # remove pokemon from MAD DB, which are scanned before event end and needs to be rescanned, adapt time from local to UTC time
+                    self._reset_pokemon(event.end - timedelta(hours=self.tz_offset))
+                    break
+            self._last_pokemon_reset_check = now
+        except Exception as e:
+                    self._mad['logger'].error(f"EventWatcher: Error while checking Pokemon Resets")
+                    self._mad['logger'].exception(e)
 
     def _check_quest_resets(self):
-        #get current time to check for event start and event end
-        now = datetime.now()
         self._mad['logger'].info("EventWatcher: check quest changing events")
-        # check, if one of the pokemon event is just started or ended
-        for event in self._quest_events:
-            # event starts during last check?
-            if "start" in self.__quests_reset_types.get(event.etype, []):
-                if event.check_event_start(self._last_quest_reset_check, now):
-                    self._mad['logger'].success(f'EventWatcher: event start detected for event {event.name} ({event.etype}) -> reset quests')
-                    # remove all quests from MAD DB
-                    self._reset_all_quests()
-                    self._mad["mapping_manager"].update()
-                    self._send_tg_info_questreset(event.name, "Start")
-                    break
-            # event end during last check?
-            if "end" in self.__quests_reset_types.get(event.etype, []):
-                if event.check_event_end(self._last_quest_reset_check, now):
-                    self._mad['logger'].success(f'EventWatcher: event end detected for event {event.name} ({event.etype}) -> reset quests')
-                    # remove all quests from MAD DB
-                    self._reset_all_quests()
-                    self._mad["mapping_manager"].update()
-                    self._send_tg_info_questreset(event.name, "Ende")
-                    break
-        self._last_quest_reset_check = now
+        try:
+            #get current time to check for event start and event end
+            now = datetime.now()
 
-    def _check_spawn_events(self):
-        # get existing events from the db and bring them in a format that's easier to work with
-        query = "select event_name, event_start, event_end from trs_event;"
-        db_events = self._mad['db_wrapper'].autofetch_all(query)
-        events_in_db = {}
-        for db_event in db_events:
-            events_in_db[db_event["event_name"]] = {
-                "event_start": db_event["event_start"],
-                "event_end": db_event["event_end"]
-            }
+            # check, if one of the pokemon event is just started or ended
+            for event in self._quest_events:
+                # event starts during last check?
+                if "start" in self.__quests_reset_types.get(event.etype, []):
+                    if event.check_event_start(self._last_quest_reset_check, now):
+                        self._mad['logger'].success(f'EventWatcher: event start detected for event {event.name} ({event.etype}) -> reset quests')
+                        # remove all quests from MAD DB
+                        self._reset_all_quests()
+                        self._mad["mapping_manager"].update()
+                        self._send_tg_info_questreset(event.name, "Start")
+                        break
+                # event end during last check?
+                if "end" in self.__quests_reset_types.get(event.etype, []):
+                    if event.check_event_end(self._last_quest_reset_check, now):
+                        self._mad['logger'].success(f'EventWatcher: event end detected for event {event.name} ({event.etype}) -> reset quests')
+                        # remove all quests from MAD DB
+                        self._reset_all_quests()
+                        self._mad["mapping_manager"].update()
+                        self._send_tg_info_questreset(event.name, "Ende")
+                        break
+            self._last_quest_reset_check = now
+        except Exception as e:
+            self._mad['logger'].error(f"EventWatcher: Error while checking Quest Resets")
+            self._mad['logger'].exception(e)
 
-        # check if there are missing event entries in the db and if so, create them
-        for event_type_name in self.type_to_name.values():
-            if event_type_name not in events_in_db.keys():
-                vals = {
-                    "event_name": event_type_name,
-                    "event_start": self.DEFAULT_TIME,
-                    "event_end": self.DEFAULT_TIME,
-                    "event_lure_duration": DEFAULT_LURE_DURATION
-                }
-                self._mad['db_wrapper'].autoexec_insert("trs_event", vals)
-                self._mad['logger'].success(f"EventWatcher: Created event type {event_type_name}")
+    def _update_spawn_events_in_mad_db(self):
+        # abort, if there is no spawn event in list -> nothing to do
+        if len(self._spawn_events) == 0:
+            self._mad['logger'].info("EventWatcher: no spawnpoint changing events -> no event update in MAD-DB needed")
+            return
 
-                events_in_db[event_type_name] = {
-                    "event_start": self.DEFAULT_TIME,
-                    "event_end": self.DEFAULT_TIME
+        self._mad['logger'].info("EventWatcher: Check spawnpoint changing events")
+        try:
+            # get existing events from the db and bring them in a format that's easier to work with
+            query = "select event_name, event_start, event_end from trs_event;"
+            db_events = self._mad['db_wrapper'].autofetch_all(query)
+            events_in_db = {}
+            for db_event in db_events:
+                events_in_db[db_event["event_name"]] = {
+                    "event_start": db_event["event_start"],
+                    "event_end": db_event["event_end"]
                 }
 
-        # go through all events that boost spawns, check if their times differ from the event in the db
-        # and if so, update the db accordingly
-        updated_mad_events = []
-        for event in self._spawn_events:
-            if event.etype not in updated_mad_events:
-                type_name = self.type_to_name.get(event.etype, "Others")
-                db_entry = events_in_db[type_name]
-                if db_entry["event_start"] != event.start or db_entry["event_end"] != event.end:
+            # check if there are missing event entries in the db and if so, create them
+            for event_type_name in self.type_to_name.values():
+                if event_type_name not in events_in_db.keys():
                     vals = {
-                        "event_start": event.start.strftime('%Y-%m-%d %H:%M:%S'),
-                        "event_end": event.end.strftime('%Y-%m-%d %H:%M:%S'),
-                        "event_lure_duration": event.bonus_lure_duration if event.bonus_lure_duration is not None else DEFAULT_LURE_DURATION
+                        "event_name": event_type_name,
+                        "event_start": self.DEFAULT_TIME,
+                        "event_end": self.DEFAULT_TIME,
+                        "event_lure_duration": DEFAULT_LURE_DURATION
                     }
-                    where = {
-                        "event_name": self.type_to_name.get(event.etype, "Others")
-                    }
-                    self._mad['db_wrapper'].autoexec_update("trs_event", vals, where_keyvals=where)
-                    self._mad['logger'].success(f'EventWatcher: Updated MAD event {vals["event_name"]} with start:{vals["event_start"]}, end:{vals["event_end"]}, lure_duration:{vals["event_lure_duration"]}')
+                    self._mad['db_wrapper'].autoexec_insert("trs_event", vals)
+                    self._mad['logger'].success(f"EventWatcher: Created event type {event_type_name}")
 
-                updated_mad_events.append(event.etype)
-
-        # just deletes all events that aren't part of Event Watcher
-        if self.__delete_events:
-            for db_event_name in events_in_db:
-                if not db_event_name in self.type_to_name.values():
-                    vals = {
-                        "event_name": db_event_name
+                    events_in_db[event_type_name] = {
+                        "event_start": self.DEFAULT_TIME,
+                        "event_end": self.DEFAULT_TIME
                     }
-                    self._mad['db_wrapper'].autoexec_delete("trs_event", vals)
-                    self._mad['logger'].success(f"EventWatcher: Deleted event {db_event_name}")
+
+            # go through all events that boost spawns, check if their times differ from the event in the db
+            # and if so, update the db accordingly
+            updated_mad_events = []
+            for event in self._spawn_events:
+                if event.etype not in updated_mad_events:
+                    type_name = self.type_to_name.get(event.etype, "Others")
+                    db_entry = events_in_db[type_name]
+                    #handle unknown eventstart
+                    if event.start is None:
+                        continue
+                    if db_entry["event_start"] != event.start or db_entry["event_end"] != event.end:
+                        vals = {
+                            "event_start": event.start.strftime('%Y-%m-%d %H:%M:%S'),
+                            "event_end": event.end.strftime('%Y-%m-%d %H:%M:%S'),
+                            "event_lure_duration": event.bonus_lure_duration if event.bonus_lure_duration is not None else DEFAULT_LURE_DURATION
+                        }
+                        where = {
+                            "event_name": self.type_to_name.get(event.etype, "Others")
+                        }
+                        self._mad['db_wrapper'].autoexec_update("trs_event", vals, where_keyvals=where)
+                        self._mad['logger'].success(f'EventWatcher: Updated MAD event {event.etype} with start:{vals["event_start"]}, end:{vals["event_end"]}, lure_duration:{vals["event_lure_duration"]}')
+
+                    updated_mad_events.append(event.etype)
+
+            # just deletes all events that aren't part of Event Watcher
+            if self.__delete_events:
+                for db_event_name in events_in_db:
+                    if not db_event_name in self.type_to_name.values():
+                        vals = {
+                            "event_name": db_event_name
+                        }
+                        self._mad['db_wrapper'].autoexec_delete("trs_event", vals)
+                        self._mad['logger'].success(f"EventWatcher: Deleted event {db_event_name}")
+        except Exception as e:
+            self._mad['logger'].error(f"EventWatcher: Error while checking Spawn Events: {e}")
 
     def _get_events(self):
-        # get the event list from github
-        raw_events = requests.get("https://raw.githubusercontent.com/ccev/pogoinfo/v2/active/events.json").json()
-        self._all_events = []
-        self._spawn_events = []
-        self._quest_events = []
-        self._pokemon_events = []
+        self._mad['logger'].info("EventWatcher: Update event list from external")
+        try:
+            # get the event list from github
+            raw_events = requests.get("https://raw.githubusercontent.com/ccev/pogoinfo/v2/active/events.json").json()
+            self._all_events = []
+            self._spawn_events = []
+            self._quest_events = []
+            self._pokemon_events = []
 
-        # sort out events that have ended, bring them into a format that's easier to work with
-        # and put them into seperate lists depending if they boost spawns or reset quests
-        # then sort those after their start time
-        for raw_event in raw_events:
-            new_event = EventWatcherEvent.fromPogoinfo(raw_event)
-            # sort out invalid or outdated events
-            if new_event is None:
-                continue
-            if new_event.end < datetime.now():
-                continue
-            # season workaround: ignore events with long duration
-            if new_event.get_duration_in_days() > self.__ignore_events_duration_in_days:
-                self._mad['logger'].info(f'EventWatcher: Ignore following event because duration exceed configurated limit of {self.__ignore_events_duration_in_days} days: {raw_event["name"]}')
-                continue
-            # store valid events
-            self._all_events.append(new_event)
-            # get events with changed spawnpoints
-            # TBD: check how to handle events with just bonus_lure_duration. Hint: MAD ignores lure_duration setting for event 'DEFAULT' (see function _extract_args_single_stop)
-            if new_event.has_spawnpoints:
-                self._spawn_events.append(new_event)
-            # get events with changed quests
-            if new_event.has_quests:
-                self._quest_events.append(new_event)
-            # get events which has changed pokemon pool
-            if new_event.has_pokemon:
-                self._pokemon_events.append(new_event)
+            # sort out events that have ended, bring them into a format that's easier to work with
+            # and put them into seperate lists depending if they boost spawns or reset quests
+            # then sort those after their start time
+            for raw_event in raw_events:
+                new_event = EventWatcherEvent.fromPogoinfo(raw_event)
+                # sort out invalid or outdated events
+                if new_event is None:
+                    continue
+                if new_event.end < datetime.now():
+                    continue
+                # season workaround: ignore events with long duration
+                if new_event.get_duration_in_days() > self.__ignore_events_duration_in_days:
+                    self._mad['logger'].info(f'EventWatcher: Ignore following event because duration exceed configurated limit of {self.__ignore_events_duration_in_days} days: {raw_event["name"]}')
+                    continue
+                # store valid events
+                self._all_events.append(new_event)
+                # get events with changed spawnpoints
+                # TBD: check how to handle events with just bonus_lure_duration. Hint: MAD ignores lure_duration setting for event 'DEFAULT' (see function _extract_args_single_stop)
+                if new_event.has_spawnpoints:
+                    self._spawn_events.append(new_event)
+                # get events with changed quests
+                if new_event.has_quests:
+                    self._quest_events.append(new_event)
+                # get events which has changed pokemon pool
+                if new_event.has_pokemon:
+                    self._pokemon_events.append(new_event)
 
-        #sort pokemon lists
-        self._quest_events = sorted(self._quest_events, key=lambda e: e.start)
-        self._spawn_events = sorted(self._spawn_events, key=lambda e: e.start)
-        self._pokemon_events = sorted(self._pokemon_events, key=lambda e: e.start)
-        self._all_events = sorted(self._pokemon_events, key=lambda e: e.start)
+            #sort pokemon lists
+            self._quest_events = sorted(self._quest_events, key=lambda e: (e.start is None, e.start))
+            self._spawn_events = sorted(self._spawn_events, key=lambda e: (e.start is None, e.start))
+            self._pokemon_events = sorted(self._pokemon_events, key=lambda e: (e.start is None, e.start))
+            self._all_events = sorted(self._pokemon_events, key=lambda e: (e.start is None, e.start))
+        except Exception as e:
+            self._mad['logger'].error(f"EventWatcher: Error while getting events: {e}")
 
     def EventWatcher(self):
         last_checked_events = datetime(2000, 1, 1, 0, 0, 0)
         if(self.__tg_info_enable):
             self._api = SimpleTelegramApi(self.__token)
-        
+
+        # load events initally
+        self._get_events()
+        self._update_spawn_events_in_mad_db()
+        last_checked_events = datetime.now()
+
         while True:
-            # check for new events on event website only with configurated event check time
-            if (datetime.now() - last_checked_events) >= timedelta(seconds=self.__sleep):
-                try:
-                    self._get_events()
-                except Exception as e:
-                    self._mad['logger'].error(f"EventWatcher: Error while getting events: {e}")
-
-                if len(self._spawn_events) > 0:
-                    self._mad['logger'].info("EventWatcher: Check Spawnpoint changing Events")
-                    try:
-                        self._check_spawn_events()
-                    except Exception as e:
-                        self._mad['logger'].error(f"EventWatcher: Error while checking Spawn Events: {e}")
-
-                last_checked_events = datetime.now()
-            
             #if enabled, run pokemon reset check every cycle to ensure pokemon rescan just after spawn event change
             if self.__reset_pokemon_enable:
-                try:
-                    self._check_pokemon_resets()
-                except Exception as e:
-                    self._mad['logger'].error(f"EventWatcher: Error while checking Pokemon Resets")
-                    self._mad['logger'].exception(e)
+                self._check_pokemon_resets()
 
             #if enabled, run quest reset check every cycle to ensure quest rescan just after quest event change
-            if self.__quests_enable:
-                try:
-                    self._check_quest_resets()
-                except Exception as e:
-                    self._mad['logger'].error(f"EventWatcher: Error while checking Quest Resets")
-                    self._mad['logger'].exception(e)
-                
+            if self.__reset_quests_enable:
+                self._check_quest_resets()
+
+            # check for new events on event website only with configurated event check time
+            # check after reset actions to avoid removing events before event end is detected.
+            if (datetime.now() - last_checked_events) >= timedelta(seconds=self.__sleep):
+                self._get_events()
+                if len(self._spawn_events) > 0:
+                    self._update_spawn_events_in_mad_db()
+                last_checked_events = datetime.now()
+
+            # wait mainloop time
             time.sleep(self.__sleep_mainloop_in_s)
 
     def autoeventThread(self):
