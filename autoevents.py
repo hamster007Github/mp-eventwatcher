@@ -98,7 +98,9 @@ class EventWatcherEvent():
         bonus_lure_duration = None
         for bonus in raw_event["bonuses"]:
             if bonus.get("template", "") == "longer-lure":
-                bonus_lure_duration = bonus["value"]*60
+                # if lure duration is not avaiable: use default 3 hours
+                lure_duration_in_hour =  bonus.get("value", 3)
+                bonus_lure_duration = lure_duration_in_hour*60
                 break
 
         # check for changed pokemon spawn pool
