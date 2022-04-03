@@ -4,7 +4,7 @@ This is a fork from [mp-eventwatcher](https://github.com/ccev/mp-eventwatcher) f
 - (change) only add spawn events as MAD event and add no lure duration only events
 - (new feature) use of plugin pages to visualize current event data of plugin
 - (new feature) Telegram notification on quest reset
-- (new feature) delete quest table in case of quest reset instead of manipulate walker. Enable MAD to rescan quests. Example walker setting:
+- (new feature) delete quest table in case of quest reset instead of manipulate walker. You have to enable MAD to rescan quests by useful walker setting. Example walker setting:
 
 | Area          | Area mode | Walker mode | Setting    |
 | ------------- | --------- | ----------- | ---------- |
