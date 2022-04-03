@@ -18,13 +18,11 @@ This is a fork from [mp-eventwatcher](https://github.com/ccev/mp-eventwatcher) f
 - Update lure duration for default event in case of not spawn changing event with lure duration != default lure duration ->  MAD ignores lure_duration setting for event 'DEFAULT' (see function _extract_args_single_stop() in [DbPogoProtoSubmit.py](https://github.com/Map-A-Droid/MAD/blob/master/mapadroid/db/DbPogoProtoSubmit.py))
 
 # Usage:
-You can import this like any other MAD Plugin.
-
-If this is the first time you're setting up a MAD Plugin:
-- Download Eventwatcher.mp on the [releases page](https://github.com/ccev/mp-eventwatcher/releases)
-- Open {madmin.com}/plugins, click "Choose file" and choose the EventWatcher.mp file you just downloaded. Or drag&drop it there.
-- go to MAD/plugins/EventWatcher/ and `cp plugin.ini.example plugin.ini`
-- adapt plugin.ini for your needs
+I don't provide a mp file. But you can easily install the plugin by clone this branch into your MAD/plugins/ folder:
+- go to MAD/plugins: `cd <home?>/MAD/plugins`
+- clone this branch: `git clone --branch v2refactor https://github.com/hamster007Github/mp-eventwatcher.git`
+- go to new folder MAD/plugins/mp-eventwatcher/ and `cp plugin.ini.example plugin.ini`
+- adapt MAD/plugins/mp-eventwatcher/plugin.ini for your needs
 - Restart MAD
 
 ## plugin.ini options
