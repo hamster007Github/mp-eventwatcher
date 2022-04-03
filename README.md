@@ -47,9 +47,14 @@ If this is the first time you're setting up a MAD Plugin:
   - Available event types are `event`, `community-day`, `spotlight-hour` and `raid-hour`. The last 2 are less relevant. Most events are of type `event`.
 
 **Telegram notification**:
-  - `tg_info_enable` Telegram bot API token from @godfather. ['true' or 'false' (default)]
+This feature informs a user, group or channel about quest resets.
+  - `tg_info_enable` Enable or disable Telegram notification feature. ['true' or 'false' (default)]
   - `tg_bot_token` Telegram bot API token from @godfather.
   - `tg_chat_id` @username or id
+  - `quest_rescan_timewindow` timewindow with pattern ##-## (24h time format), in which quests are scanned. Used for inform Telegram users about possible rescan.
+  - `tg_str_questreset_before_scan` string which is posted additionally in configurated `tg_chat_id`, if quest reset happens before `quest_rescan_timewindow`. Will result in regular quest scan later.
+  - `tg_str_questreset_during_scan` string which is posted additionally in configurated `tg_chat_id`, if quest reset happens during `quest_rescan_timewindow`. Will result in quest rescan.
+  - `tg_str_questreset_after_scan` string which is posted additionally in configurated `tg_chat_id`, if quest reset happens after `quest_rescan_timewindow`. Will result in no quest rescan.
 
 # How does it work?
 To not put unnecessary load on cool community-made websites, the Plugin pulls data from [this file](https://github.com/ccev/pogoinfo/blob/v2/active/events.json).

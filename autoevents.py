@@ -135,32 +135,9 @@ class EventWatcherEvent():
 class EventWatcher(mapadroid.utils.pluginBase.Plugin):
     def __init__(self, mad):
         super().__init__(mad)
-
         self._rootdir = os.path.dirname(os.path.abspath(__file__))
-
         self._mad = mad
-
         self._pluginconfig.read(self._rootdir + "/plugin.ini")
-        self._versionconfig.read(self._rootdir + "/version.mpl")
-        self.author = self._versionconfig.get("plugin", "author", fallback="ccev")
-        self.url = self._versionconfig.get("plugin", "url", fallback="https://github.com/ccev/mp-eventwatcher")
-        self.description = self._versionconfig.get(
-            "plugin", "description", fallback="Automatically put Events that boost Spawns in your database")
-        self.version = self._versionconfig.get("plugin", "version", fallback="1.0")
-        self.pluginname = self._versionconfig.get("plugin", "pluginname", fallback="EventWatcher")
-
-        self.templatepath = self._rootdir + "/template/"
-        self.staticpath = self._rootdir + "/static/"
-
-        self._routes = [
-            ("/ew_event_list", self.pluginpage_event_list),
-            ("/ew_about", self.pluginpage_about)
-        ]
-        self._hotlink = [
-            ("Event list", "/ew_event_list", "List current events known by plugin"),
-            ("About", "/ew_about", "Plugin information and credits"),
-        ]
-
         self.type_to_name = {
             "community-day": "Community Days",
             "spotlight-hour": "Spotlight Hours",
@@ -170,14 +147,30 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         }
         self._last_pokemon_reset_check = datetime.now()
         self._last_quest_reset_check = datetime.now()
-
+        # add plugin links/pages in madmin only, if plugin is activated by plugin.ini
         if self._pluginconfig.getboolean("plugin", "active", fallback=False):
+            self._versionconfig.read(self._rootdir + "/version.mpl")
+            self.author = self._versionconfig.get("plugin", "author", fallback="ccev")
+            self.url = self._versionconfig.get("plugin", "url", fallback="https://github.com/ccev/mp-eventwatcher")
+            self.description = self._versionconfig.get(
+                "plugin", "description", fallback="Automatically put Events that boost Spawns in your database")
+            self.version = self._versionconfig.get("plugin", "version", fallback="1.0")
+            self.pluginname = self._versionconfig.get("plugin", "pluginname", fallback="EventWatcher")
+            self.templatepath = self._rootdir + "/template/"
+            self.staticpath = self._rootdir + "/static/"
+            self._routes = [
+                ("/ew_event_list", self.pluginpage_event_list),
+                ("/ew_about", self.pluginpage_about)
+            ]
+            self._hotlink = [
+                ("Event list", "/ew_event_list", "List current events known by plugin"),
+                ("About", "/ew_about", "Plugin information and credits")
+            ]
+            # register plugin incl. plugin subpages in madmin
             self._plugin = Blueprint(
                 str(self.pluginname), __name__, static_folder=self.staticpath, template_folder=self.templatepath)
-
             for route, view_func in self._routes:
                 self._plugin.add_url_rule(route, route.replace("/", ""), view_func=view_func)
-
             for name, link, description in self._hotlink:
                 self._mad['madmin'].add_plugin_hotlink(name, self._plugin.name+"."+link.replace("/", ""),
                                                        self.pluginname, self.description, self.author, self.url,
@@ -200,50 +193,78 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
 
         try:
             self.tz_offset = round((datetime.now() - datetime.utcnow()).total_seconds() / 3600)
-            self.__sleep = self._pluginconfig.getint("plugin", "sleep", fallback=3600)
-            self.__sleep_mainloop_in_s = 60
-            self.__delete_events = self._pluginconfig.getboolean("plugin", "delete_events", fallback=False)
-            self.__ignore_events_duration_in_days = self._pluginconfig.getint("plugin", "max_event_duration", fallback=999)
-            # Telegram info configuration
-            self.__tg_info_enable = self._pluginconfig.getboolean("plugin", "tg_info_enable", fallback=False)
-            if self.__tg_info_enable:
-                self.__token = self._pluginconfig.get("plugin", "tg_bot_token", fallback=None)
-                self.__tg_chat_id = self._pluginconfig.get("plugin", "tg_chat_id", fallback=None)
-                if self.__token is None or self.__tg_chat_id is None:
-                    self._mad['logger'].error(f"EventWatcher: TG options not set fully set in plugin.ini: 'tg_bot_token':{self.__token} 'tg_chat_id':{self.__tg_chat_id}")
-                    return False
-            # pokemon reset configuration
-            self.__reset_pokemon_enable = self._pluginconfig.getboolean("plugin", "reset_pokemon_enable", fallback=False)
-            self.__reset_pokemon_truncate = self._pluginconfig.getboolean("plugin", "reset_pokemon_truncate", fallback=False)
-            self.__reset_pokemon_restart_app = self._pluginconfig.getboolean("plugin", "reset_pokemon_restart_app", fallback=False)
-            
-            # quest reset configuration
-            self.__reset_quests_enable = self._pluginconfig.getboolean("plugin", "reset_quests_enable", fallback=False)
-            reset_for = self._pluginconfig.get("plugin", "reset_quests_event_type", fallback="event")
-            self.__quests_reset_types = {}
-            for etype in reset_for.split(" "):
-                etype = etype.strip()
-                if ":" in etype:
-                    split = etype.split(":")
-                    etype = split[0]
-                    if "start" in split[1]:
-                        times = ["start"]
-                    elif "end" in split[1]:
-                        times = ["end"]
-                    else:
-                        times = ["start", "end"]
-                else:
-                    times = ["start", "end"]
-                self.__quests_reset_types[etype] = times
-            
+            self._load_config_parameter()
             self.autoeventThread()
-
         except Exception as e:
             self._mad['logger'].error("Exception initializing EventWatcher: ")
             self._mad['logger'].exception(e)
             return False
 
         return True
+
+    def _load_config_parameter(self):
+        # General configuration parameter
+        self.__sleep = self._pluginconfig.getint("plugin", "sleep", fallback=3600)
+        self.__sleep_mainloop_in_s = 60
+        self.__delete_events = self._pluginconfig.getboolean("plugin", "delete_events", fallback=False)
+        self.__ignore_events_duration_in_days = self._pluginconfig.getint("plugin", "max_event_duration", fallback=999)
+        # pokemon reset configuration parameter
+        self.__reset_pokemon_enable = self._pluginconfig.getboolean("plugin", "reset_pokemon_enable", fallback=False)
+        self.__reset_pokemon_truncate = self._pluginconfig.getboolean("plugin", "reset_pokemon_truncate", fallback=False)
+        self.__reset_pokemon_restart_app = self._pluginconfig.getboolean("plugin", "reset_pokemon_restart_app", fallback=False)
+        # quest reset configuration parameter
+        self.__reset_quests_enable = self._pluginconfig.getboolean("plugin", "reset_quests_enable", fallback=False)
+        reset_for = self._pluginconfig.get("plugin", "reset_quests_event_type", fallback="event")
+        self.__quests_reset_types = {}
+        for etype in reset_for.split(" "):
+            etype = etype.strip()
+            if ":" in etype:
+                split = etype.split(":")
+                etype = split[0]
+                if "start" in split[1]:
+                    times = ["start"]
+                elif "end" in split[1]:
+                    times = ["end"]
+                else:
+                    times = ["start", "end"]
+            else:
+                times = ["start", "end"]
+            self.__quests_reset_types[etype] = times
+        # Telegram info configuration parameter
+        self.__tg_info_enable = self._pluginconfig.getboolean("plugin", "tg_info_enable", fallback=False)
+        if self.__tg_info_enable:
+            #Just read and check all the other TG related parameter, if function is enabled
+            self._mad['logger'].info(f"EventWatcher: TG info feature activated")
+            self.__token = self._pluginconfig.get("plugin", "tg_bot_token", fallback=None)
+            self.__tg_chat_id = self._pluginconfig.get("plugin", "tg_chat_id", fallback=None)
+            if self.__token is None or self.__tg_chat_id is None:
+                self._mad['logger'].error(f"EventWatcher: TG options not set fully set in plugin.ini: 'tg_bot_token':{self.__token} 'tg_chat_id':{self.__tg_chat_id}")
+                return False
+            self.__tg_str_questreset_before_scan = self._pluginconfig.get("plugin", "tg_str_questreset_before_scan", fallback="Quests will be scanned in regular quest scan time window.")
+            self.__tg_str_questreset_during_scan = self._pluginconfig.get("plugin", "tg_str_questreset_during_scan", fallback="Quests will be rescanned now.")
+            self.__tg_str_questreset_before_scan = self._pluginconfig.get("plugin", "tg_str_questreset_after_scan", fallback="No quest rescan.")
+            quest_timewindow_str=self._pluginconfig.get("plugin", "quest_rescan_timewindow")
+            status, timewindow_list = self._get_timewindow_from_string(quest_timewindow_str)
+            if status is False:
+                self._mad['logger'].error(f"EventWatcher: Error while read parameter 'quest_rescan_timewindow' from plugin.ini. Please check value and pattern: quest_rescan_timewindow = ##-##")
+                return False
+            self.__quest_timewindow_start_h = timewindow_list[0]
+            self.__quest_timewindow_end_h = timewindow_list[1]
+
+    def _get_timewindow_from_string(self, timewindow_str):
+        try:
+            timewindow_list = []
+            timewindow_str_list = timewindow_str.split('-')
+            if len(timewindow_str_list) == 2:
+                timewindow_list.append(int(timewindow_str_list[0]))
+                timewindow_list.append(int(timewindow_str_list[1]))
+                return True, timewindow_list
+            else:
+                return False, timewindow_list
+        except Exception as e:
+            self._mad['logger'].error(f"EventWatcher: Error in _get_timewindow_from_string()")
+            self._mad['logger'].exception(e)
+            return False, timewindow_list
 
     def _convert_time(self, time_string, local=True):
         if time_string is None:
@@ -255,13 +276,15 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
 
     def _send_tg_info_questreset(self, event_name, event_change_str):
         if self.__tg_info_enable:
-            #@TODO: make rescan string and condition configurable
             now = datetime.now()
-            latest_rescan_time = now.replace(hour=18, minute=0)
-            if now < latest_rescan_time:
-                rescan_str = "Automatischer kleiner Questscan gestartet."
-            else:
-                rescan_str = "Kein neuer Questscan gestartet."
+            first_rescan_time = now.replace(hour=self.__quest_timewindow_start_h, minute=0)
+            latest_rescan_time = now.replace(hour=self.__quest_timewindow_end_h, minute=0)
+            if now < first_rescan_time:     # quest changed before regular quest scan
+                rescan_str = self.__tg_str_questreset_before_scan
+            elif now < latest_rescan_time:  # quest changed after regular quest scan
+                rescan_str = self.__tg_str_questreset_during_scan
+            else:                           # quest changed outside quest scan time window
+                rescan_str = self.__tg_str_questreset_after_scan
             #@TODO: make quest reset string configurable
             info_msg = f"\U000026A0 Info: Quests gelöscht aufgrund {event_change_str} von Event {event_name}. {rescan_str}"
             result = self._api.send_message(self.__tg_chat_id, info_msg)

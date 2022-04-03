@@ -29,9 +29,17 @@ reset_quests_event_type = event
 ; *******************************
 ; * Telegram info configuration *
 ; *******************************
-; Telegram bot API token from @godfather. ['true' or 'false' (default)]
+; Enable or disable Telegram notification feature. ['true' or 'false' (default)]
 tg_info_enable = false
 ; Telegram bot API token from @godfather. Example: tg_bot_token = 1234567890:ABCDEFGHiJkLmnopq123AbcdefGh
 #tg_bot_token = 
-; @username or id. Example: tg_chat_id = 12345678
+; @username or id. Example: tg_chat_id = -12345678
 #tg_chat_id = 
+; time window, in which quests would be scanned (regular and rescan). Used for inform users about possible rescan (24h, only full hours are supported). e.g. quest_rescan_timewindow = 02-18
+#quest_rescan_timewindow = 
+; Telegram information string for quest reset before regular quest scan time. Default:Quests will be scanned in regular quest scan time window.
+#tg_str_questreset_before_scan = 
+; Telegram information string for quest reset during regular quest scan time. Default:Quests will be rescanned now.
+#tg_str_questreset_during_scan = 
+; Telegram information string for quest reset after regular quest scan time. Default:No quest rescan.
+#tg_str_questreset_after_scan = 
