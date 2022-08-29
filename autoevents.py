@@ -242,7 +242,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 return False
             self.__tg_str_questreset_before_scan = self._pluginconfig.get("plugin", "tg_str_questreset_before_scan", fallback="Quests will be scanned in regular quest scan time window.")
             self.__tg_str_questreset_during_scan = self._pluginconfig.get("plugin", "tg_str_questreset_during_scan", fallback="Quests will be rescanned now.")
-            self.__tg_str_questreset_before_scan = self._pluginconfig.get("plugin", "tg_str_questreset_after_scan", fallback="No quest rescan.")
+            self.__tg_str_questreset_after_scan = self._pluginconfig.get("plugin", "tg_str_questreset_after_scan", fallback="No quest rescan.")
             quest_timewindow_str=self._pluginconfig.get("plugin", "quest_rescan_timewindow")
             status, timewindow_list = self._get_timewindow_from_string(quest_timewindow_str)
             if status is False:
