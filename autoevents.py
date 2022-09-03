@@ -251,6 +251,8 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 return False
             self.__quest_timewindow_start_h = timewindow_list[0]
             self.__quest_timewindow_end_h = timewindow_list[1]
+        # Discord info configuration parameter
+        self.__dc_info_enable = self._pluginconfig.getboolean("plugin", "dc_info_enable", fallback=False)
         if self.__dc_info_enable:
             self._mad['logger'].info(f"EventWatcher: Discord info feature activated")
             self.__dc_webook_url = self._pluginconfig.get("plugin", "dc_webook_url", fallback=None)
@@ -283,20 +285,10 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
 
     def _send_dc_info_questreset(self, event_name, event_change_str):
         if self.__dc_info_enable:
-            now = datetime.now()
-            first_rescan_time = now.replace(hour=self.__quest_timewindow_start_h, minute=0)
-            latest_rescan_time = now.replace(hour=self.__quest_timewindow_end_h, minute=0)
-            if now < first_rescan_time:     # quest changed before regular quest scan
-                rescan_str = self.__tg_str_questreset_before_scan
-            elif now < latest_rescan_time:  # quest changed after regular quest scan
-                rescan_str = self.__tg_str_questreset_during_scan
-            else:                           # quest changed outside quest scan time window
-                rescan_str = self.__tg_str_questreset_after_scan
-            
             webhook = DiscordWebhook(url=self.__dc_webook_url)
             #create embed object for webhook
             # you can set the color as a decimal (color=242424) or hex (color='03b2f8') number
-            embed = DiscordEmbed(title='Quest rescan', description='Quests have been deleted because of {event_change_str} from Event {event_name}', color='03b2f8')
+            embed = DiscordEmbed(title='Quest rescan', description="Quests have been deleted because of {event_change_str} from Event {event_name}", color='03b2f8')
 
             # add embed object to webhook
             webhook.add_embed(embed)
@@ -403,6 +395,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                         self._reset_all_quests()
                         self._mad["mapping_manager"].update()
                         self._send_tg_info_questreset(event.name, "Start")
+                        self._send_dc_info_questreset(event.name, "Start")
                         break
                 # event end during last check?
                 if "end" in self.__quests_reset_types.get(event.etype, []):
@@ -412,6 +405,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                         self._reset_all_quests()
                         self._mad["mapping_manager"].update()
                         self._send_tg_info_questreset(event.name, "Ende")
+                        self._send_dc_info_questreset(event.name, "Ende")
                         break
             self._last_quest_reset_check = now
         except Exception as e:
@@ -493,6 +487,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         self._mad['logger'].info("EventWatcher: Update event list from external")
         try:
             # get the event list from github
+            # raw_events = requests.get("https://raw.githubusercontent.com/ccev/pogoinfo/v2/active/events.json").json()
             raw_events = requests.get("https://raw.githubusercontent.com/ccev/pogoinfo/v2/active/events.json").json()
             self._all_events = []
             self._spawn_events = []
