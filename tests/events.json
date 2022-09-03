@@ -31,8 +31,8 @@
     {
         "name": "Test Event - Plugin Test",
         "type": "event",
-        "start": "2022-09-03 22:40",
-        "end": "2022-09-03 22:45",
+        "start": "2022-09-03 22:45",
+        "end": "2022-09-03 23:45",
         "spawns": [
             {
                 "id": 263,
