@@ -295,11 +295,10 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             # add embed object to webhook
             webhook.add_embed(embed)
             response = webhook.execute()
-            self._mad['logger'].success(f"EventWatcher: send Discord info message: result:{response}")            
-            #if response["200"]:
-            #    self._mad['logger'].success(f"EventWatcher: send Discord info message: result:{response}")
-            #else:
-            #    self._mad['logger'].error(f"EventWatcher: send Discord info message failed with result:{response}")
+            if response.status_code in [200, 204]:
+                self._mad['logger'].success(f"EventWatcher: send Discord info message: result:{response}")
+            else:
+                self._mad['logger'].error(f"EventWatcher: send Discord info message failed with result:{response}")
 
     def _send_tg_info_questreset(self, event_name, event_change_str):
         if self.__tg_info_enable:
