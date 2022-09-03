@@ -257,7 +257,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             self._mad['logger'].info(f"EventWatcher: Discord info feature activated")
             self.__dc_webook_url = self._pluginconfig.get("plugin", "dc_webook_url", fallback=None)
             if self.__dc_webook_url is None:
-                self._mad['logger'].error(f"EventWatcher: Discord Webhook Url not configured in plugin.ini")
+                self._mad['logger'].error(f"EventWatcher: Discord Webhook 'Url':{self.__dc_webook_url} not configured in plugin.ini")
                 return False
 
     def _get_timewindow_from_string(self, timewindow_str):
@@ -288,7 +288,9 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             webhook = DiscordWebhook(url=self.__dc_webook_url)
             #create embed object for webhook
             # you can set the color as a decimal (color=242424) or hex (color='03b2f8') number
-            embed = DiscordEmbed(title='Quest rescan', description="Quests have been deleted because of {event_change_str} from Event {event_name}", color='03b2f8')
+            embedTitle = "Quest rescan"
+            embedDescription = f"Quests have been deleted because of {event_change_str} for Event {event_name}"
+            embed = DiscordEmbed(title=embedTitle, description=embedDescription, color='03b2f8')
 
             # add embed object to webhook
             webhook.add_embed(embed)
