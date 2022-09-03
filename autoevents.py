@@ -288,8 +288,8 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             webhook = DiscordWebhook(url=self.__dc_webhook_url)
             #create embed object for webhook
             # you can set the color as a decimal (color=242424) or hex (color='03b2f8') number
-            embedTitle = "Quest rescan"
-            embedDescription = f"Quests have been deleted because of {event_change_str} for Event {event_name}"
+            embedTitle = "Event started"
+            embedDescription = f"Quests have been deleted because: {event_change_str} for Event {event_name}"
             embed = DiscordEmbed(title=embedTitle, description=embedDescription, color='03b2f8')
 
             # add embed object to webhook
