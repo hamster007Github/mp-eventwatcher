@@ -255,7 +255,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         self.__dc_info_enable = self._pluginconfig.getboolean("plugin", "dc_info_enable", fallback=False)
         if self.__dc_info_enable:
             self._mad['logger'].info(f"EventWatcher: Discord info feature activated")
-            self.__dc_webhook_url = self._pluginconfig.get("plugin", "dc_webook_url", fallback=None)
+            self.__dc_webhook_url = self._pluginconfig.get("plugin", "dc_webhook_url", fallback=None)
             if self.__dc_webhook_url is None:
                 self._mad['logger'].error(f"EventWatcher: Discord Webhook 'Url':{self.__dc_webhook_url} not configured in plugin.ini")
                 return False
