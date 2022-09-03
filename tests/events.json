@@ -29,9 +29,9 @@
         "has_spawnpoints": false
     },
     {
-        "name": "Test Event - Plugin Test 3",
+        "name": "Test Event - Plugin Test 4",
         "type": "event",
-        "start": "2022-09-03 22:52",
+        "start": "2022-09-03 23:01",
         "end": "2022-09-03 23:58",
         "spawns": [
             {
