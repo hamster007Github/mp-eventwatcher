@@ -43,3 +43,11 @@ tg_info_enable = false
 #tg_str_questreset_during_scan = 
 ; Telegram information string for quest reset after regular quest scan time. Default:No quest rescan.
 #tg_str_questreset_after_scan = 
+
+; *******************************
+; * Discord info configuration *
+; *******************************
+; Enable or disable Discord notification feature. ['true' or 'false' (default)]
+dc_info_enable = false
+; Provide Discord Webhook Url
+#dc_webhook_url = "https://discord.xyz/asdf

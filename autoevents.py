@@ -7,6 +7,7 @@ import urllib
 from threading import Thread
 from flask import render_template, Blueprint, jsonify
 from datetime import datetime, timedelta
+from discord_webhook import DiscordWebhook, DiscordEmbed
 
 from mapadroid.madmin.functions import auth_required
 import mapadroid.utils.pluginBase
@@ -250,6 +251,12 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 return False
             self.__quest_timewindow_start_h = timewindow_list[0]
             self.__quest_timewindow_end_h = timewindow_list[1]
+        if self.__dc_info_enable:
+            self._mad['logger'].info(f"EventWatcher: Discord info feature activated")
+            self.__dc_webook_url = self._pluginconfig.get("plugin", "dc_webook_url", fallback=None)
+            if self.__dc_webook_url is None:
+                self._mad['logger'].error(f"EventWatcher: Discord Webhook Url not configured in plugin.ini")
+                return False
 
     def _get_timewindow_from_string(self, timewindow_str):
         try:
@@ -274,6 +281,32 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             time = time + timedelta(hours=self.tz_offset)
         return time
 
+    def _send_dc_info_questreset(self, event_name, event_change_str):
+        if self.__dc_info_enable:
+            now = datetime.now()
+            first_rescan_time = now.replace(hour=self.__quest_timewindow_start_h, minute=0)
+            latest_rescan_time = now.replace(hour=self.__quest_timewindow_end_h, minute=0)
+            if now < first_rescan_time:     # quest changed before regular quest scan
+                rescan_str = self.__tg_str_questreset_before_scan
+            elif now < latest_rescan_time:  # quest changed after regular quest scan
+                rescan_str = self.__tg_str_questreset_during_scan
+            else:                           # quest changed outside quest scan time window
+                rescan_str = self.__tg_str_questreset_after_scan
+            
+            webhook = DiscordWebhook(url=self.__dc_webook_url)
+            #create embed object for webhook
+            # you can set the color as a decimal (color=242424) or hex (color='03b2f8') number
+            embed = DiscordEmbed(title='Quest rescan', description='Quests have been deleted because of {event_change_str} from Event {event_name}', color='03b2f8')
+
+            # add embed object to webhook
+            webhook.add_embed(embed)
+            response = webhook.execute()
+                        
+            if response["200"]:
+                self._mad['logger'].success(f"EventWatcher: send Discord info message: result:{response}")
+            else:
+                self._mad['logger'].error(f"EventWatcher: send Discord info message failed with result:{response}")
+
     def _send_tg_info_questreset(self, event_name, event_change_str):
         if self.__tg_info_enable:
             now = datetime.now()
@@ -292,6 +325,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 self._mad['logger'].success(f"EventWatcher: send Telegram info message:{info_msg} result:{result}")
             else:
                 self._mad['logger'].error(f"EventWatcher: send Telegram info message failed with result:{result}")
+
 
     def _reset_all_quests(self):
         sql_query = "TRUNCATE trs_quest"
