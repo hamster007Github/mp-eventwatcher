@@ -255,9 +255,9 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         self.__dc_info_enable = self._pluginconfig.getboolean("plugin", "dc_info_enable", fallback=False)
         if self.__dc_info_enable:
             self._mad['logger'].info(f"EventWatcher: Discord info feature activated")
-            self.__dc_webook_url = self._pluginconfig.get("plugin", "dc_webook_url", fallback=None)
-            if self.__dc_webook_url is None:
-                self._mad['logger'].error(f"EventWatcher: Discord Webhook 'Url':{self.__dc_webook_url} not configured in plugin.ini")
+            self.__dc_webhook_url = self._pluginconfig.get("plugin", "dc_webook_url", fallback=None)
+            if self.__dc_webhook_url is None:
+                self._mad['logger'].error(f"EventWatcher: Discord Webhook 'Url':{self.__dc_webhook_url} not configured in plugin.ini")
                 return False
 
     def _get_timewindow_from_string(self, timewindow_str):
@@ -285,7 +285,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
 
     def _send_dc_info_questreset(self, event_name, event_change_str):
         if self.__dc_info_enable:
-            webhook = DiscordWebhook(url=self.__dc_webook_url)
+            webhook = DiscordWebhook(url=self.__dc_webhook_url)
             #create embed object for webhook
             # you can set the color as a decimal (color=242424) or hex (color='03b2f8') number
             embedTitle = "Quest rescan"
