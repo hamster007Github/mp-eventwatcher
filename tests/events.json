@@ -14,9 +14,9 @@
         "has_spawnpoints": true
     },
     {
-        "name": "Test1,
+        "name": "Test12",
         "type": "event",
-        "start": "2022-09-05 23:10",
+        "start": "2022-09-05 23:12",
         "end": "2022-09-12 23:00",
         "spawns": [
             {
