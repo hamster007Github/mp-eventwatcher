@@ -51,3 +51,6 @@ tg_info_enable = false
 dc_info_enable = false
 ; Provide Discord Webhook Url
 #dc_webhook_url = "https://discord.xyz/asdf
+#dc_webhook_username = PoGo Quest bot
+; Provide Discord Webhook Embed Title
+#dc_webhook_embedTitle = Event Quest notification

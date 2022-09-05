@@ -7,7 +7,6 @@ import urllib
 from threading import Thread
 from flask import render_template, Blueprint, jsonify
 from datetime import datetime, timedelta
-from discord_webhook import DiscordWebhook, DiscordEmbed
 
 from mapadroid.madmin.functions import auth_required
 import mapadroid.utils.pluginBase
@@ -256,6 +255,9 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         if self.__dc_info_enable:
             self._mad['logger'].info(f"EventWatcher: Discord info feature activated")
             self.__dc_webhook_url = self._pluginconfig.get("plugin", "dc_webhook_url", fallback=None)
+            self.__dc_webook_username = self._pluginconfig.get("plugin", "dc_webhook_username", fallback="PoGo Event Bot")
+            self.__dc_webhook_embedTitle = self._pluginconfig.get("plugin", "dc_webhook_embedTitle", fallback="Event Quest notification")
+            
             if self.__dc_webhook_url is None:
                 self._mad['logger'].error(f"EventWatcher: Discord Webhook 'Url':{self.__dc_webhook_url} not configured in plugin.ini")
                 return False
@@ -285,20 +287,31 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
 
     def _send_dc_info_questreset(self, event_name, event_change_str):
         if self.__dc_info_enable:
-            webhook = DiscordWebhook(url=self.__dc_webhook_url)
-            #create embed object for webhook
-            # you can set the color as a decimal (color=242424) or hex (color='03b2f8') number
-            embedTitle = "Event started"
+            embedUsername = self.__dc_webook_username
+            data = {
+                "content" : "",
+                "username" : embedUsername
+            }
+            url=self.__dc_webhook_url
             embedDescription = f"Quests have been deleted because: {event_change_str} for Event {event_name}"
-            embed = DiscordEmbed(title=embedTitle, description=embedDescription, color='03b2f8')
+            embedTitle = self.__dc_webhook_embedTitle
 
-            # add embed object to webhook
-            webhook.add_embed(embed)
-            response = webhook.execute()
-            if response.status_code in [200, 204]:
-                self._mad['logger'].success(f"EventWatcher: send Discord info message: result:{response}")
+            data["embeds"] = [
+            {
+                "description" : embedDescription,
+                "title" : embedTitle
+            }
+            ]
+
+            result = requests.post(url, json = data)
+
+            try:
+                result.raise_for_status()
+            except requests.exceptions.HTTPError as err:
+                self._mad['logger'].error(f"EventWatcher: unable to sent Discord info message: result:{result.status_code}")
             else:
-                self._mad['logger'].error(f"EventWatcher: send Discord info message failed with result:{response}")
+                self._mad['logger'].success(f"EventWatcher: send Discord info message:{embedDescription} result:{result.status_code}")
+ 
 
     def _send_tg_info_questreset(self, event_name, event_change_str):
         if self.__tg_info_enable:
@@ -488,6 +501,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         self._mad['logger'].info("EventWatcher: Update event list from external")
         try:
             # get the event list from github
+            #raw_events = requests.get("https://raw.githubusercontent.com/ccev/pogoinfo/v2/active/events.json").json()
             raw_events = requests.get("https://raw.githubusercontent.com/ccev/pogoinfo/v2/active/events.json").json()
             self._all_events = []
             self._spawn_events = []
