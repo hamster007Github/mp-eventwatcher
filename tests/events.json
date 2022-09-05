@@ -1,9 +1,9 @@
 [
     {
-        "name": "Test Event XYZ",
+        "name": "Kartoffel",
         "type": "event",
-        "start": "2022-09-05 22:55",
-        "end": "2022-09-05 23:55",
+        "start": "2022-09-05 22:56",
+        "end": "2022-09-05 23:56",
         "spawns": [],
         "eggs": [],
         "raids": [],
