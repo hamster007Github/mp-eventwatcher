@@ -1,9 +1,9 @@
 [
     {
-        "name": "Test Event 6",
+        "name": "Test Event XY",
         "type": "spotlight-hour",
-        "start": "2022-09-05 22:52",
-        "end": "2022-09-05 22:55",
+        "start": "2022-09-05 22:55",
+        "end": "2022-09-05 23:55",
         "spawns": [],
         "eggs": [],
         "raids": [],
