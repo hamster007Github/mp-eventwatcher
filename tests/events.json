@@ -1,8 +1,8 @@
 [
     {
-        "name": "Test Event 5",
+        "name": "Test Event 6",
         "type": "spotlight-hour",
-        "start": "2022-09-05 22:50",
+        "start": "2022-09-05 22:52",
         "end": "2022-09-05 22:55",
         "spawns": [],
         "eggs": [],
@@ -10,7 +10,7 @@
         "shinies": [],
         "bonuses": [],
         "features": [],
-        "has_quests": false,
+        "has_quests": true,
         "has_spawnpoints": true
     },
     {
