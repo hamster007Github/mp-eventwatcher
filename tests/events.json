@@ -1,19 +1,5 @@
 [
     {
-        "name": "Test Even 2",
-        "type": "spotlight-hour",
-        "start": "2022-09-05 22:36",
-        "end": "2022-09-05 22:45",
-        "spawns": [],
-        "eggs": [],
-        "raids": [],
-        "shinies": [],
-        "bonuses": [],
-        "features": [],
-        "has_quests": true,
-        "has_spawnpoints": false
-    },
-    {
         "name": "Munna Spotlight Hour",
         "type": "spotlight-hour",
         "start": "2022-09-06 18:00",
