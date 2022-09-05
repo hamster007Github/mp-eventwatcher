@@ -11,7 +11,7 @@
         "bonuses": [],
         "features": [],
         "has_quests": true,
-        "has_spawnpoints": true
+        "has_spawnpoints": false
     },
     {
         "name": "Munna Spotlight Hour",
