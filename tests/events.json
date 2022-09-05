@@ -1,23 +1,9 @@
 [
         {
-        "name": "Kartoffel",
+        "name": "Kartoffel5",
         "type": "event",
-        "start": "2022-09-05 22:56",
-        "end": "2022-09-05 23:56",
-        "spawns": [],
-        "eggs": [],
-        "raids": [],
-        "shinies": [],
-        "bonuses": [],
-        "features": [],
-        "has_quests": true,
-        "has_spawnpoints": false
-    },
-        {
-        "name": "Kartoffel 2",
-        "type": "event",
-        "start": "2022-09-05 22:58",
-        "end": "2022-09-05 23:56",
+        "start": "2022-09-05 23:01",
+        "end": "2022-09-05 23:50",
         "spawns": [],
         "eggs": [],
         "raids": [],
