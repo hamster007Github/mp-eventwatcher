@@ -501,8 +501,8 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         self._mad['logger'].info("EventWatcher: Update event list from external")
         try:
             # get the event list from github
-            #raw_events = requests.get("https://raw.githubusercontent.com/ccev/pogoinfo/v2/active/events.json").json()
-            raw_events = requests.get("https://github.com/acocalypso/mp-eventwatcher/blob/v2refactor/tests/events.json").json()
+            raw_events = requests.get("https://raw.githubusercontent.com/ccev/pogoinfo/v2/active/events.json").json()
+            #raw_events = requests.get("https://github.com/acocalypso/mp-eventwatcher/blob/v2refactor/tests/events.json").json()
             self._all_events = []
             self._spawn_events = []
             self._quest_events = []
