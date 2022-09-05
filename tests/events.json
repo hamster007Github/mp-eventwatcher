@@ -1,7 +1,7 @@
 [
     {
         "name": "Test Event XY",
-        "type": "spotlight-hour",
+        "type": "event",
         "start": "2022-09-05 22:55",
         "end": "2022-09-05 23:55",
         "spawns": [],
@@ -11,7 +11,7 @@
         "bonuses": [],
         "features": [],
         "has_quests": true,
-        "has_spawnpoints": true
+        "has_spawnpoints": false
     },
     {
         "name": "Munna Spotlight Hour",
