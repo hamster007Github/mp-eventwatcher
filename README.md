@@ -68,7 +68,9 @@ This feature informs a user, group or channel about quest resets.
 This feature informs by webhook to a discord channel about quest resets.
 
 - `dc_info_enable` Enable or disable Discord notification feature. ['true' or 'false' (default)]
+- `dc_webhook_username` Discord Bot Username. ['Pogo Event Notification']
 - `dc_webhook_url` Discord Webhook Url. [https://discordapp.com/api/webhooks/123456789/XXXXXXXXXXXXXXXXXXXXXXX]
+- `dc_webhook_title` Discord Webhook Title for the embed. ['Event Quest notification']
   
 # How does it work?
 
