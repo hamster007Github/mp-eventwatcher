@@ -449,16 +449,16 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 if event_type_name not in events_in_db.keys():
                     vals = {
                         "event_name": event_type_name,
-                        "event_start": self.DEFAULT_TIME,
-                        "event_end": self.DEFAULT_TIME,
+                        "event_start": DEFAULT_TIME,
+                        "event_end": DEFAULT_TIME,
                         "event_lure_duration": DEFAULT_LURE_DURATION
                     }
                     self._mad['db_wrapper'].autoexec_insert("trs_event", vals)
                     self._mad['logger'].success(f"EventWatcher: Created event type {event_type_name}")
 
                     events_in_db[event_type_name] = {
-                        "event_start": self.DEFAULT_TIME,
-                        "event_end": self.DEFAULT_TIME
+                        "event_start": DEFAULT_TIME,
+                        "event_end": DEFAULT_TIME
                     }
 
             # go through all events that boost spawns, check if their times differ from the event in the db
