@@ -250,6 +250,17 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 return False
             self.__quest_timewindow_start_h = timewindow_list[0]
             self.__quest_timewindow_end_h = timewindow_list[1]
+        # Discord info configuration parameter
+        self.__dc_info_enable = self._pluginconfig.getboolean("plugin", "dc_info_enable", fallback=False)
+        if self.__dc_info_enable:
+            self._mad['logger'].info(f"EventWatcher: Discord info feature activated")
+            self.__dc_webhook_url = self._pluginconfig.get("plugin", "dc_webhook_url", fallback=None)
+            self.__dc_webook_username = self._pluginconfig.get("plugin", "dc_webhook_username", fallback="PoGo Event Bot")
+            self.__dc_webhook_embedTitle = self._pluginconfig.get("plugin", "dc_webhook_embedTitle", fallback="Event Quest notification")
+            
+            if self.__dc_webhook_url is None:
+                self._mad['logger'].error(f"EventWatcher: Discord Webhook 'Url':{self.__dc_webhook_url} not configured in plugin.ini")
+                return False
 
     def _get_timewindow_from_string(self, timewindow_str):
         try:
@@ -274,6 +285,34 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             time = time + timedelta(hours=self.tz_offset)
         return time
 
+    def _send_dc_info_questreset(self, event_name, event_change_str):
+        if self.__dc_info_enable:
+            embedUsername = self.__dc_webook_username
+            data = {
+                "content" : "",
+                "username" : embedUsername
+            }
+            url=self.__dc_webhook_url
+            embedDescription = f"Quests have been deleted because: {event_change_str} for Event {event_name}"
+            embedTitle = self.__dc_webhook_embedTitle
+
+            data["embeds"] = [
+            {
+                "description" : embedDescription,
+                "title" : embedTitle
+            }
+            ]
+
+            result = requests.post(url, json = data)
+
+            try:
+                result.raise_for_status()
+            except requests.exceptions.HTTPError as err:
+                self._mad['logger'].error(f"EventWatcher: unable to sent Discord info message: result:{result.status_code}")
+            else:
+                self._mad['logger'].success(f"EventWatcher: send Discord info message:{embedDescription} result:{result.status_code}")
+ 
+
     def _send_tg_info_questreset(self, event_name, event_change_str):
         if self.__tg_info_enable:
             now = datetime.now()
@@ -292,6 +331,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 self._mad['logger'].success(f"EventWatcher: send Telegram info message:{info_msg} result:{result}")
             else:
                 self._mad['logger'].error(f"EventWatcher: send Telegram info message failed with result:{result}")
+
 
     def _reset_all_quests(self):
         sql_query = "TRUNCATE trs_quest"
@@ -369,6 +409,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                         self._reset_all_quests()
                         self._mad["mapping_manager"].update()
                         self._send_tg_info_questreset(event.name, "Start")
+                        self._send_dc_info_questreset(event.name, "Start")
                         break
                 # event end during last check?
                 if "end" in self.__quests_reset_types.get(event.etype, []):
@@ -378,6 +419,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                         self._reset_all_quests()
                         self._mad["mapping_manager"].update()
                         self._send_tg_info_questreset(event.name, "Ende")
+                        self._send_dc_info_questreset(event.name, "Ende")
                         break
             self._last_quest_reset_check = now
         except Exception as e:
