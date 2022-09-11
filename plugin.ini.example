@@ -50,7 +50,7 @@ tg_info_enable = false
 ; Enable or disable Discord notification feature. ['true' or 'false' (default)]
 dc_info_enable = false
 ; Provide Discord Webhook Url
-#dc_webhook_url = "https://discord.xyz/asdf
+#dc_webhook_url = https://discord.xyz/asdf
 ; Provide a name for the "Bot User"
 #dc_webhook_username = PoGo Quest bot
 ; Provide Discord Webhook Embed Title
