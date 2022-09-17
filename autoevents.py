@@ -435,13 +435,14 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         self._mad['logger'].info("EventWatcher: Check spawnpoint changing events")
         try:
             # get existing events from the db and bring them in a format that's easier to work with
-            query = "select event_name, event_start, event_end from trs_event;"
+            query = "select event_name, event_start, event_end, event_lure_duration from trs_event;"
             db_events = self._mad['db_wrapper'].autofetch_all(query)
             events_in_db = {}
             for db_event in db_events:
                 events_in_db[db_event["event_name"]] = {
                     "event_start": db_event["event_start"],
-                    "event_end": db_event["event_end"]
+                    "event_end": db_event["event_end"],
+                    "event_lure_duration": db_event["event_lure_duration"]
                 }
 
             # check if there are missing event entries in the db and if so, create them
@@ -471,18 +472,21 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                     #handle unknown eventstart
                     if event.start is None:
                         continue
-                    if db_entry["event_start"] != event.start or db_entry["event_end"] != event.end:
+                    event_lure_duration_in_min = event.bonus_lure_duration if event.bonus_lure_duration is not None else DEFAULT_LURE_DURATION
+                    # check for different event times (means event time changed or DEFAULT time was used before) or changed lure duration of existing event
+                    if db_entry["event_start"] != event.start or db_entry["event_end"] != event.end or db_entry["event_lure_duration"] != event_lure_duration_in_min:
                         vals = {
                             "event_start": event.start.strftime('%Y-%m-%d %H:%M:%S'),
                             "event_end": event.end.strftime('%Y-%m-%d %H:%M:%S'),
-                            "event_lure_duration": event.bonus_lure_duration if event.bonus_lure_duration is not None else DEFAULT_LURE_DURATION
+                            "event_lure_duration": event_lure_duration_in_min
                         }
                         where = {
                             "event_name": self.type_to_name.get(event.etype, "Others")
                         }
                         self._mad['db_wrapper'].autoexec_update("trs_event", vals, where_keyvals=where)
                         self._mad['logger'].success(f'EventWatcher: Updated MAD event {event.etype} with start:{vals["event_start"]}, end:{vals["event_end"]}, lure_duration:{vals["event_lure_duration"]}')
-
+                    # add this event.etype to updated list, so other events from same type in the EventWatcher event list will be ignored
+                    # assumption: outdated events are removed before in EventWatcher event list and newest events are on top of the list
                     updated_mad_events.append(event.etype)
 
             # just deletes all events that aren't part of Event Watcher
