@@ -210,7 +210,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         self.__ignore_events_duration_in_days = self._pluginconfig.getint("plugin", "max_event_duration", fallback=999)
         # pokemon reset configuration parameter
         self.__reset_pokemon_enable = self._pluginconfig.getboolean("plugin", "reset_pokemon_enable", fallback=False)
-        self.__reset_pokemon_truncate = self._pluginconfig.getboolean("plugin", "reset_pokemon_truncate", fallback=False)
+        self.__reset_pokemon_strategy = self._pluginconfig.get("plugin", "reset_pokemon_strategy", fallback="all")
         self.__reset_pokemon_restart_app = self._pluginconfig.getboolean("plugin", "reset_pokemon_restart_app", fallback=False)
         # quest reset configuration parameter
         self.__reset_quests_enable = self._pluginconfig.getboolean("plugin", "reset_quests_enable", fallback=False)
@@ -348,17 +348,17 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             self._mad['logger'].error(f"EventWatcher: restart PoGo app on device '{origin_name}' failed with result:{result}")
 
     def _reset_pokemon(self, eventchange_datetime_UTC):
-        if self.__reset_pokemon_truncate:
-            sql_query = "TRUNCATE pokemon"
-            sql_args = None
-        else:
-            # SQL query: delete mon
+        if self.__reset_pokemon_strategy == "filtered":
+            # Use SQL DELETE query to delete mon
             eventchange_timestamp = eventchange_datetime_UTC.strftime("%Y-%m-%d %H:%M:%S")
             sql_query = "DELETE FROM pokemon WHERE last_modified < %s AND disappear_time > %s"
             sql_args = (
                 eventchange_timestamp,
                 eventchange_timestamp
             )
+        else:
+            sql_query = "TRUNCATE pokemon"
+            sql_args = None
         dbreturn = self._mad['db_wrapper'].execute(sql_query, args=sql_args, commit=True)
         self._mad['logger'].info(f'EventWatcher: pokemon deleted by SQL query: {sql_query} arguments: {sql_args} return: {dbreturn}')
 

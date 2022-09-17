@@ -13,9 +13,9 @@ max_event_duration = 30
 ; *******************************
 ; option to automatically delete obsolete pokemon from MAD database on start and end of spawn event to enable MAD to rescan pokemon. ['true' or 'false' (default)]
 reset_pokemon_enable = false
-; option to use TRUNCATE SQL query instead of DELETE. Recommended for bigger instances ['true' or 'false' (default)]
-reset_pokemon_truncate = false
-; restart pokemon go app on all devices on pokemon reset to flush encounter IDs in PD ['true' or 'false' (default)]
+; define pokemon delete strategy. ['all'(default) or 'filtered']
+reset_pokemon_strategy = all
+; restart pokemon go app on all devices on pokemon reset to flush encounter IDs in PD ['true' or 'false' (default)]. Not recommended to enable.
 reset_pokemon_restart_app = false
 
 ; *******************************

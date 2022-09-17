@@ -41,7 +41,9 @@ I don't provide a mp file. But you can easily install the plugin by clone this b
 **Pokemon reset**:
 
 - `reset_pokemon_enable` option to automatically delete obsolete pokemon from MAD database on start and end of pokemon changing event to enable MAD to rescan pokemon. true: enable function, false: disable function (default)
-- `reset_pokemon_truncate` option to use TRUNCATE SQL query instead of DELETE. Recommended for bigger instances. true: use TRUNCATE, false: use DELETE (default)
+- `reset_pokemon_strategy` define pokemon delete strategy. ['all'(default) or 'filtered']
+  - `all` delete all pokemon from databasse by SQL TRUNCATE query. Highly recommended for bigger instances
+  - `filtered` delete only pokemon from database by SQL DELETE query, which are effected by eventchange. Can result in database lock issues (depends on server performance / database size
 - `reset_pokemon_restart_app` restart pokemon go app on all devices on pokemon reset to flush encounter IDs in PD ['true' or 'false' (default)]
 
 **Quest reset**:
