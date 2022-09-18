@@ -7,6 +7,8 @@ sleep = 3600
 delete_events = false
 ; ignore events with duration longer than max_event_duration days. set to high value to disable (e.g. 999)
 max_event_duration = 30
+; language for Telegram and Discrod notifications. ['en'(default) or 'de']
+language = en
 
 ; *******************************
 ; * Pokemon reset configuration *
@@ -37,12 +39,6 @@ tg_info_enable = false
 #tg_chat_id = 
 ; time window, in which quests would be scanned (regular and rescan). Used for inform users about possible rescan (24h, only full hours are supported). e.g. quest_rescan_timewindow = 02-18
 #quest_rescan_timewindow = 
-; Telegram information string for quest reset before regular quest scan time. Default:Quests will be scanned in regular quest scan time window.
-#tg_str_questreset_before_scan = 
-; Telegram information string for quest reset during regular quest scan time. Default:Quests will be rescanned now.
-#tg_str_questreset_during_scan = 
-; Telegram information string for quest reset after regular quest scan time. Default:No quest rescan.
-#tg_str_questreset_after_scan = 
 
 ; *******************************
 ; * Discord info configuration *
@@ -53,5 +49,3 @@ dc_info_enable = false
 #dc_webhook_url = https://discord.xyz/asdf
 ; Provide a name for the "Bot User"
 #dc_webhook_username = PoGo Quest bot
-; Provide Discord Webhook Embed Title
-#dc_webhook_embedTitle = Event Quest notification

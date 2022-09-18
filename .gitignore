@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 
 plugin.ini
+local_custom.ini

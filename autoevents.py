@@ -7,6 +7,7 @@ import urllib
 from threading import Thread
 from flask import render_template, Blueprint, jsonify
 from datetime import datetime, timedelta
+from string import Template
 
 from mapadroid.madmin.functions import auth_required
 import mapadroid.utils.pluginBase
@@ -138,6 +139,16 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         self._rootdir = os.path.dirname(os.path.abspath(__file__))
         self._mad = mad
         self._pluginconfig.read(self._rootdir + "/plugin.ini")
+        self._local = None
+        try:
+            f = open(self._rootdir + "/local_custom.json")
+            self._local = json.loads(f.read())
+            self._mad['logger'].success("EventWatcher: loaded local_custom.json")
+        except:
+            self._mad['logger'].info("EventWatcher: failed loading local_custom.json. Fallback to local_default.json")
+            f = open(self._rootdir + "/local_default.json")
+            self._local = json.loads(f.read())
+        
         self.type_to_name = {
             "community-day": "Community Days",
             "spotlight-hour": "Spotlight Hours",
@@ -208,9 +219,10 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         self.__sleep_mainloop_in_s = 60
         self.__delete_events = self._pluginconfig.getboolean("plugin", "delete_events", fallback=False)
         self.__ignore_events_duration_in_days = self._pluginconfig.getint("plugin", "max_event_duration", fallback=999)
+        self.__language = self._pluginconfig.get("plugin", "language", fallback="en").strip()
         # pokemon reset configuration parameter
         self.__reset_pokemon_enable = self._pluginconfig.getboolean("plugin", "reset_pokemon_enable", fallback=False)
-        self.__reset_pokemon_strategy = self._pluginconfig.get("plugin", "reset_pokemon_strategy", fallback="all")
+        self.__reset_pokemon_strategy = self._pluginconfig.get("plugin", "reset_pokemon_strategy", fallback="all").strip()
         self.__reset_pokemon_restart_app = self._pluginconfig.getboolean("plugin", "reset_pokemon_restart_app", fallback=False)
         # quest reset configuration parameter
         self.__reset_quests_enable = self._pluginconfig.getboolean("plugin", "reset_quests_enable", fallback=False)
@@ -240,10 +252,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             if self.__token is None or self.__tg_chat_id is None:
                 self._mad['logger'].error(f"EventWatcher: TG options not set fully set in plugin.ini: 'tg_bot_token':{self.__token} 'tg_chat_id':{self.__tg_chat_id}")
                 return False
-            self.__tg_str_questreset_before_scan = self._pluginconfig.get("plugin", "tg_str_questreset_before_scan", fallback="Quests will be scanned in regular quest scan time window.")
-            self.__tg_str_questreset_during_scan = self._pluginconfig.get("plugin", "tg_str_questreset_during_scan", fallback="Quests will be rescanned now.")
-            self.__tg_str_questreset_after_scan = self._pluginconfig.get("plugin", "tg_str_questreset_after_scan", fallback="No quest rescan.")
-            quest_timewindow_str=self._pluginconfig.get("plugin", "quest_rescan_timewindow")
+            quest_timewindow_str = self._pluginconfig.get("plugin", "quest_rescan_timewindow")
             status, timewindow_list = self._get_timewindow_from_string(quest_timewindow_str)
             if status is False:
                 self._mad['logger'].error(f"EventWatcher: Error while read parameter 'quest_rescan_timewindow' from plugin.ini. Please check value and pattern: quest_rescan_timewindow = ##-##")
@@ -285,6 +294,18 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             time = time + timedelta(hours=self.tz_offset)
         return time
 
+    def _get_local_tg_rescan_msg(self):
+        now = datetime.now()
+        first_rescan_time = now.replace(hour=self.__quest_timewindow_start_h, minute=0)
+        latest_rescan_time = now.replace(hour=self.__quest_timewindow_end_h, minute=0)
+        if now < first_rescan_time:     # quest changed before quest rescan timewindow
+            rescan_str = self._local['tg_questrescan_before'][self.__language]
+        elif now < latest_rescan_time:  # quest changed during quest rescan timewindow
+            rescan_str = self._local['tg_questrescan_during'][self.__language]
+        else:                           # quest changed after quest rescan timewindow
+            rescan_str = self._local['tg_questrescan_after'][self.__language]
+        return rescan_str
+
     def _send_dc_info_questreset(self, event_name, event_change_str):
         if self.__dc_info_enable:
             embedUsername = self.__dc_webook_username
@@ -293,8 +314,9 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 "username" : embedUsername
             }
             url=self.__dc_webhook_url
-            embedDescription = f"Quests have been deleted because: {event_change_str} for Event {event_name}"
-            embedTitle = self.__dc_webhook_embedTitle
+            event_trigger = self._local[event_change_str][self.__language]
+            embedDescription = Template(self._local['dc_questreset_tmpl'][self.__language]).safe_substitute(event_trigger=event_trigger, event_name=event_name)
+            embedTitle = self._local["dc_webhook_embedTitle"][self.__language]
 
             data["embeds"] = [
             {
@@ -311,27 +333,17 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 self._mad['logger'].error(f"EventWatcher: unable to sent Discord info message: result:{result.status_code}")
             else:
                 self._mad['logger'].success(f"EventWatcher: send Discord info message:{embedDescription} result:{result.status_code}")
- 
 
     def _send_tg_info_questreset(self, event_name, event_change_str):
         if self.__tg_info_enable:
-            now = datetime.now()
-            first_rescan_time = now.replace(hour=self.__quest_timewindow_start_h, minute=0)
-            latest_rescan_time = now.replace(hour=self.__quest_timewindow_end_h, minute=0)
-            if now < first_rescan_time:     # quest changed before regular quest scan
-                rescan_str = self.__tg_str_questreset_before_scan
-            elif now < latest_rescan_time:  # quest changed after regular quest scan
-                rescan_str = self.__tg_str_questreset_during_scan
-            else:                           # quest changed outside quest scan time window
-                rescan_str = self.__tg_str_questreset_after_scan
-            #@TODO: make quest reset string configurable
-            info_msg = f"\U000026A0 Info: Quests gelöscht aufgrund {event_change_str} von Event {event_name}. {rescan_str}"
+            rescan_str = self._get_local_tg_rescan_msg()
+            event_trigger = self._local[event_change_str][self.__language]
+            info_msg = Template(self._local['tg_questreset_tmpl'][self.__language]).safe_substitute(event_trigger=event_trigger, event_name=event_name, rescan_str=rescan_str)
             result = self._api.send_message(self.__tg_chat_id, info_msg)
             if result["ok"]:
                 self._mad['logger'].success(f"EventWatcher: send Telegram info message:{info_msg} result:{result}")
             else:
                 self._mad['logger'].error(f"EventWatcher: send Telegram info message failed with result:{result}")
-
 
     def _reset_all_quests(self):
         sql_query = "TRUNCATE trs_quest"
@@ -408,8 +420,8 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                         # remove all quests from MAD DB
                         self._reset_all_quests()
                         self._mad["mapping_manager"].update()
-                        self._send_tg_info_questreset(event.name, "Start")
-                        self._send_dc_info_questreset(event.name, "Start")
+                        self._send_tg_info_questreset(event.name, "start")
+                        self._send_dc_info_questreset(event.name, "start")
                         break
                 # event end during last check?
                 if "end" in self.__quests_reset_types.get(event.etype, []):
@@ -418,8 +430,8 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                         # remove all quests from MAD DB
                         self._reset_all_quests()
                         self._mad["mapping_manager"].update()
-                        self._send_tg_info_questreset(event.name, "Ende")
-                        self._send_dc_info_questreset(event.name, "Ende")
+                        self._send_tg_info_questreset(event.name, "end")
+                        self._send_dc_info_questreset(event.name, "end")
                         break
             self._last_quest_reset_check = now
         except Exception as e:
