@@ -63,7 +63,7 @@ I don't provide a mp file. But you can easily install the plugin by clone this b
 This feature informs a user, group or channel about quest resets.
 - `tg_info_enable` Enable or disable Telegram notification feature. ['true' or 'false' (default)]
 - `tg_bot_token` Telegram bot API token from @godfather.
-- `tg_chat_id` @username or id
+- `tg_chat_id` @username or id. Separate multiple chats with comma. Example: tg_chat_id = -12345678, 87654321
 - `quest_rescan_timewindow` timewindow with pattern ##-## (24h time format), in which quests are scanned. Used for inform Telegram users about possible rescan.
 
 
@@ -71,8 +71,8 @@ This feature informs a user, group or channel about quest resets.
 
 This feature informs by webhook to a discord channel about quest resets.
 - `dc_info_enable` Enable or disable Discord notification feature. ['true' or 'false' (default)]
-- `dc_webhook_username` Discord Bot Username. ['Pogo Event Notification']
-- `dc_webhook_url` Discord Webhook Url. [https://discordapp.com/api/webhooks/123456789/XXXXXXXXXXXXXXXXXXXXXXX]
+- `dc_webhook_username` Discord bot username. ['Pogo Event Notification']
+- `dc_webhook_url` Discord webhook url. Separate multiple webhock urls with comma. [https://discordapp.com/api/webhooks/123456789/XXXXXXXXXXXXXXXXXXXXXXX, ...]
 
 ## Locals
 
@@ -93,7 +93,7 @@ You can provide your own local_custom.json with locals. You can also include new
 - `dc_questreset_tmpl` template string for quest delete and quest rescan notification. you can use placeholder, which will be replaced by plugin. Available placeholder:
   - `${event_trigger}` will be replaced by "start" or "end"
   - `${event_name}` will be replaced by english event name
-- `dc_webhook_embedTitle` Discord Webhook Title for the embed.
+- `dc_webhook_embedTitle` Discord webhook title for the embed.
 
 # How does it work?
 

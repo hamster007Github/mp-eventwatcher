@@ -248,10 +248,15 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             #Just read and check all the other TG related parameter, if function is enabled
             self._mad['logger'].info(f"EventWatcher: TG info feature activated")
             self.__token = self._pluginconfig.get("plugin", "tg_bot_token", fallback=None)
-            self.__tg_chat_id = self._pluginconfig.get("plugin", "tg_chat_id", fallback=None)
-            if self.__token is None or self.__tg_chat_id is None:
-                self._mad['logger'].error(f"EventWatcher: TG options not set fully set in plugin.ini: 'tg_bot_token':{self.__token} 'tg_chat_id':{self.__tg_chat_id}")
+            if self.__token is None:
+                self._mad['logger'].error(f"EventWatcher: 'tg_bot_token' not set in plugin.ini")
                 return False
+            tg_chat_id_str = self._pluginconfig.get("plugin", "tg_chat_id", fallback=None)
+            if tg_chat_id_str is None:
+                self._mad['logger'].error(f"EventWatcher: 'tg_chat_id' not set in plugin.ini")
+                return False
+            #convert parameter into list and remove whitespaces
+            self.__tg_chat_id_list = [chat_id.strip() for chat_id in tg_chat_id_str.split(',')]
             quest_timewindow_str = self._pluginconfig.get("plugin", "quest_rescan_timewindow")
             status, timewindow_list = self._get_timewindow_from_string(quest_timewindow_str)
             if status is False:
@@ -263,13 +268,15 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
         self.__dc_info_enable = self._pluginconfig.getboolean("plugin", "dc_info_enable", fallback=False)
         if self.__dc_info_enable:
             self._mad['logger'].info(f"EventWatcher: Discord info feature activated")
-            self.__dc_webhook_url = self._pluginconfig.get("plugin", "dc_webhook_url", fallback=None)
+            dc_webhook_url_str = self._pluginconfig.get("plugin", "dc_webhook_url", fallback=None)
+            if dc_webhook_url_str is None:
+                self._mad['logger'].error(f"EventWatcher: 'dc_webhook_url' not set in plugin.ini")
+                return False
+            #convert parameter into list and remove whitespaces
+            self.__dc_webhook_url_list = [webhook_url.strip() for webhook_url in dc_webhook_url_str.split(',')]
             self.__dc_webook_username = self._pluginconfig.get("plugin", "dc_webhook_username", fallback="PoGo Event Bot")
             self.__dc_webhook_embedTitle = self._pluginconfig.get("plugin", "dc_webhook_embedTitle", fallback="Event Quest notification")
-            
-            if self.__dc_webhook_url is None:
-                self._mad['logger'].error(f"EventWatcher: Discord Webhook 'Url':{self.__dc_webhook_url} not configured in plugin.ini")
-                return False
+        self._mad['logger'].success(f"EventWatcher: Loading plugin.ini parameter successful")
 
     def _get_timewindow_from_string(self, timewindow_str):
         try:
@@ -313,37 +320,35 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                 "content" : "",
                 "username" : embedUsername
             }
-            url=self.__dc_webhook_url
             event_trigger = self._local[event_change_str][self.__language]
             embedDescription = Template(self._local['dc_questreset_tmpl'][self.__language]).safe_substitute(event_trigger=event_trigger, event_name=event_name)
             embedTitle = self._local["dc_webhook_embedTitle"][self.__language]
-
             data["embeds"] = [
             {
                 "description" : embedDescription,
                 "title" : embedTitle
             }
             ]
-
-            result = requests.post(url, json = data)
-
-            try:
-                result.raise_for_status()
-            except requests.exceptions.HTTPError as err:
-                self._mad['logger'].error(f"EventWatcher: unable to sent Discord info message: result:{result.status_code}")
-            else:
-                self._mad['logger'].success(f"EventWatcher: send Discord info message:{embedDescription} result:{result.status_code}")
+            for url in self.__dc_webhook_url_list:
+                result = requests.post(url, json = data)
+                try:
+                    result.raise_for_status()
+                except requests.exceptions.HTTPError as err:
+                    self._mad['logger'].error(f"EventWatcher: unable to sent Discord info message to url:{url} result:{result.status_code}")
+                else:
+                    self._mad['logger'].success(f"EventWatcher: send Discord info message:{embedDescription} to url:{url} result:{result.status_code}")
 
     def _send_tg_info_questreset(self, event_name, event_change_str):
         if self.__tg_info_enable:
             rescan_str = self._get_local_tg_rescan_msg()
             event_trigger = self._local[event_change_str][self.__language]
             info_msg = Template(self._local['tg_questreset_tmpl'][self.__language]).safe_substitute(event_trigger=event_trigger, event_name=event_name, rescan_str=rescan_str)
-            result = self._api.send_message(self.__tg_chat_id, info_msg)
-            if result["ok"]:
-                self._mad['logger'].success(f"EventWatcher: send Telegram info message:{info_msg} result:{result}")
-            else:
-                self._mad['logger'].error(f"EventWatcher: send Telegram info message failed with result:{result}")
+            for chat_id in self.__tg_chat_id_list:
+                result = self._api.send_message(chat_id, info_msg)
+                if result["ok"]:
+                    self._mad['logger'].success(f"EventWatcher: send Telegram info message:{info_msg} result:{result}")
+                else:
+                    self._mad['logger'].error(f"EventWatcher: send Telegram info message failed with result:{result}")
 
     def _reset_all_quests(self):
         sql_query = "TRUNCATE trs_quest"

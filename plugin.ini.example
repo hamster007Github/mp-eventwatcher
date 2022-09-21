@@ -35,9 +35,9 @@ reset_quests_event_type = event
 tg_info_enable = false
 ; Telegram bot API token from @godfather. Example: tg_bot_token = 1234567890:ABCDEFGHiJkLmnopq123AbcdefGh
 #tg_bot_token = 
-; @username or id. Example: tg_chat_id = -12345678
+; @username or id. Separate multiple chats with comma. Example: tg_chat_id = -12345678, 87654321
 #tg_chat_id = 
-; time window, in which quests would be scanned (regular and rescan). Used for inform users about possible rescan (24h, only full hours are supported). e.g. quest_rescan_timewindow = 02-18
+; time window, in which MAD is configurated to scan quests (regular and rescan). 24h format, only full hours are supported. e.g. quest_rescan_timewindow = 02-18
 #quest_rescan_timewindow = 
 
 ; *******************************
@@ -45,7 +45,7 @@ tg_info_enable = false
 ; *******************************
 ; Enable or disable Discord notification feature. ['true' or 'false' (default)]
 dc_info_enable = false
-; Provide Discord Webhook Url
+; Provide Discord Webhook Url. Separate multiple webhocks with comma. Example: dc_webhook_url = https://discord.xyz/asdf, https://discord.xyz/hjkl
 #dc_webhook_url = https://discord.xyz/asdf
 ; Provide a name for the "Bot User"
 #dc_webhook_username = PoGo Quest bot
