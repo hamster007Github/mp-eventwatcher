@@ -38,7 +38,7 @@ I don't provide a mp file. But you can easily install the plugin by clone this b
 
 - `sleep` to define the time to wait in-between checking for new events. By default it's one hour.
 - `delete_events` if you want Event Watcher to delete non-needed events (including basically all you've created yourself) - by default it's set to False.
-- `max_event_duration` ignore events with duration longer than max_event_duration days. Set to 999 if you want to care also for session events
+- `max_event_duration` ignore events with duration longer than max_event_duration days. Workaround function for original EventWatcher plugin. For this fork, set this to 999 to deactivate workaround ans also handle `season` events 
 - `language` set language for Telegram and Discord notifications. Must be provided by local_default.json or local_custom.json. If no local_custom.json is provided, local_default.json is used (provides 'de' and 'en'). Default: en
 
 **Pokemon reset**:
@@ -52,11 +52,11 @@ I don't provide a mp file. But you can easily install the plugin by clone this b
 **Quest reset**:
 
 - `reset_quests_enable` option to automatically delete quests from MAD database on start and/or end of quest changing event to enable MAD to rescan quests. true: enable function, false: disable function (default)
-- `reset_quests_event_type` define event types and if you want quests to reset for their start, end or both.
-  - `event community-day` if you want to rescan quests for every start and end of an event and cday
-  - `event:start` only rescan quests for event starts (my personal recommendation)
-  - `community-day event:end` Rescan quests for cday starts and ends, but only for event ends
-  - Available event types are `event`, `community-day`, `spotlight-hour` and `raid-hour`. The last 2 are less relevant. Most events are of type `event`.
+- `reset_quests_event_type` define event types and if you want quests to reset for their start, end or both. Syntax: "<eventtype>:end/start <eventtype2>:end/start". If you don't set `start` or `end`, both will be activated. (default: `event`). Examples:
+  - `event community-day` reset quests for start and end of regular and cday events
+  - `event:start` reset quests for start of regular events
+  - `community-day event:end` reset quests for start and end of cday events + end of regular events
+  - Available event types are `event`, `community-day`, `season`, `spotlight-hour` and `raid-hour`. The last 2 are not relevant for quest reset. Most events are of type `event`.
 
 **Telegram notification**:
 
