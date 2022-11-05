@@ -22,9 +22,9 @@
 {% block scripts %}
 {% if not pub %}
 <script>
-function sortTable(n) {
+function sortTable(tablename, n) {
   var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-  table = document.getElementById("ew_eventtable");
+  table = document.getElementById(tablename);
   switching = true;
   // Set the sorting direction to ascending:
   dir = "asc";
@@ -84,19 +84,19 @@ function sortTable(n) {
 
 {% if not pub %}
 <br />
-<h3>EventWatcher Plugin - Event list</h3>
+<h2>EventWatcher Plugin - Event list</h2>
 <br />
-
+<h3>All events:</h3>
 <table id=ew_eventtable border="1">
   <tr>
-    <th style="text-align:left" onclick="sortTable(0)">Name</th>
-    <th style="text-align:left" onclick="sortTable(1)">Type</th>
-    <th style="text-align:left" onclick="sortTable(2)">start*</th>
-    <th style="text-align:left" onclick="sortTable(3)">end*</th>
-    <th style="text-align:left" onclick="sortTable(4)">has spawnpoints</th>
-    <th style="text-align:left" onclick="sortTable(5)">has quests</th>
-    <th style="text-align:left" onclick="sortTable(6)">has pokemon</th>
-    <th style="text-align:left" onclick="sortTable(7)">bonus lure duration</th>
+    <th style="text-align:left" onclick="sortTable('ew_eventtable', 0)">Name</th>
+    <th style="text-align:left" onclick="sortTable('ew_eventtable', 1)">Type</th>
+    <th style="text-align:left" onclick="sortTable('ew_eventtable', 2)">start*</th>
+    <th style="text-align:left" onclick="sortTable('ew_eventtable', 3)">end*</th>
+    <th style="text-align:left" onclick="sortTable('ew_eventtable', 4)">has spawnpoints</th>
+    <th style="text-align:left" onclick="sortTable('ew_eventtable', 5)">has quests</th>
+    <th style="text-align:left" onclick="sortTable('ew_eventtable', 6)">has pokemon</th>
+    <th style="text-align:left" onclick="sortTable('ew_eventtable', 7)">bonus lure duration</th>
   </tr>
   {% for eventelement in event_list %}
   <tr>
@@ -108,6 +108,25 @@ function sortTable(n) {
     <td>{{eventelement.has_quests}}</td>
     <td>{{eventelement.has_pokemon}}</td>
     <td>{{eventelement.bonus_lure_duration}}</td>
+  </tr>
+  {% endfor %}
+</table>
+*=local times
+<br />
+<h3>Quest changing events:</h3>
+<table id=ew_questeventtable border="1">
+  <tr>
+    <th style="text-align:left" onclick="sortTable('ew_questeventtable', 0)">Name</th>
+    <th style="text-align:left" onclick="sortTable('ew_questeventtable', 1)">Type</th>
+    <th style="text-align:left" onclick="sortTable('ew_questeventtable', 2)">start*</th>
+    <th style="text-align:left" onclick="sortTable('ew_questeventtable', 3)">end*</th>
+  </tr>
+  {% for eventelement in quest_list %}
+  <tr>
+    <td>{{eventelement.name}}</td>
+    <td>{{eventelement.etype}}</td>
+    <td>{{eventelement.start}}</td>
+    <td>{{eventelement.end}}</td>
   </tr>
   {% endfor %}
 </table>

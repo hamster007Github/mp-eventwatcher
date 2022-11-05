@@ -619,8 +619,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
     @auth_required
     def pluginpage_event_list(self):
         try:
-            event_list = self._all_events
-            generated_html = render_template("eventwatcher.html", header="EventWatcher", title="Event list", event_list=event_list)
+            generated_html = render_template("eventwatcher.html", header="EventWatcher", title="Event list", event_list=self._all_events, quest_list=self._quest_events)
         except Exception as e:
             self._mad['logger'].error(f"EventWatcher: Error while generating pluginpage 'Event list'")
             self._mad['logger'].exception(e)
