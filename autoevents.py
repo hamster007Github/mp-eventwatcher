@@ -204,6 +204,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
 
         try:
             self.tz_offset = round((datetime.now() - datetime.utcnow()).total_seconds() / 3600)
+            self._mad['logger'].debug(f"EventWatcher: timezone utc offset: {self.tz_offset}")
             self._load_config_parameter()
             self.autoeventThread()
         except Exception as e:
@@ -242,6 +243,12 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             else:
                 times = ["start", "end"]
             self.__quests_reset_types[etype] = times
+        quests_reset_excludes_str = self._pluginconfig.get("plugin", "reset_quests_exclude_events", fallback=None)
+        if quests_reset_excludes_str is None:
+            self.__quests_reset_excludes_list = None
+        else:
+            self.__quests_reset_excludes_list = [quests_reset_exclude.strip() for quests_reset_exclude in quests_reset_excludes_str.split(',')]
+        print(f"quests_reset_excludes_list: {self.__quests_reset_excludes_list}")
         # Telegram info configuration parameter
         self.__tg_info_enable = self._pluginconfig.getboolean("plugin", "tg_info_enable", fallback=False)
         if self.__tg_info_enable:
@@ -550,7 +557,16 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
                     self._spawn_events.append(new_event)
                 # get events with changed quests
                 if new_event.has_quests:
-                    self._quest_events.append(new_event)
+                    exclude_event = False
+                    if self.__quests_reset_excludes_list is not None:
+                        #exclude events according exclude strings from configuration
+                        for quests_reset_excludes in self.__quests_reset_excludes_list:
+                            if new_event.name.lower().find(quests_reset_excludes.lower()) != -1:
+                                self._mad['logger'].info(f"EventWatcher: skipped quest event {new_event.name}, because matching exclude string '{quests_reset_excludes}'")
+                                exclude_event = True
+                                break
+                    if not exclude_event:
+                        self._quest_events.append(new_event)
                 # get events which has changed pokemon pool
                 if new_event.has_pokemon:
                     self._pokemon_events.append(new_event)
@@ -559,7 +575,7 @@ class EventWatcher(mapadroid.utils.pluginBase.Plugin):
             self._quest_events = sorted(self._quest_events, key=lambda e: (e.start is None, e.start))
             self._spawn_events = sorted(self._spawn_events, key=lambda e: (e.start is None, e.start))
             self._pokemon_events = sorted(self._pokemon_events, key=lambda e: (e.start is None, e.start))
-            self._all_events = sorted(self._pokemon_events, key=lambda e: (e.start is None, e.start))
+            self._all_events = sorted(self._all_events, key=lambda e: (e.start is None, e.start))
         except Exception as e:
             self._mad['logger'].error(f"EventWatcher: Error while getting events: {e}")
 

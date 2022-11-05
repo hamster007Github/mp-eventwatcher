@@ -27,6 +27,8 @@ reset_pokemon_restart_app = false
 reset_quests_enable = false
 ; define event types and if you want quests to reset for their start, end or both. [Available event types are 'event', 'community-day', 'spotlight-hour' and 'raid-hour']
 reset_quests_event_type = event
+; define event name text phrases, which shall be excluded for quest reset. Separate multiple event name text phrases with comma. Uncomment (remove #) to use.
+#reset_quests_exclude_events = go battle day
 
 ; *******************************
 ; * Telegram info configuration *

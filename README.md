@@ -57,6 +57,7 @@ I don't provide a mp file. But you can easily install the plugin by clone this b
   - `event:start` reset quests for start of regular events
   - `community-day event:end` reset quests for start and end of cday events + end of regular events
   - Available event types are `event`, `community-day`, `season`, `spotlight-hour` and `raid-hour`. The last 2 are not relevant for quest reset. Most events are of type `event`.
+- `reset_quests_exclude_events` define event name text phrases, which shall be excluded for quest reset. Plugin checks, if an event name contain matching text. Can be used to ignore Go battle day, which only has special research and no changing pokestop quests. Separate multiple event name text phrases with comma.
 
 **Telegram notification**:
 
